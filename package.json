@@ -1,0 +1,22 @@
+{
+    "name": "trie-louds",
+    "version": "1.0.0",
+    "description": "Readonly but memory-sufficient data structure for dictionaries",
+    "main": "index.js",
+    "scripts": {
+        "test": "jest --verbose --coverage",
+        "lint": "eslint ."
+    },
+    "author": "Yosshi999",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/jest": "^25.2.3",
+        "@types/node": "^14.0.5",
+        "eslint": "^7.1.0",
+        "jest": "^26.0.1",
+        "ts-jest": "^26.0.0"
+    },
+    "dependencies": {
+        "typescript": "^3.9.3"
+    }
+}
