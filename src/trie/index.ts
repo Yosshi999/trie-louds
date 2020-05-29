@@ -64,7 +64,14 @@ class NaiveTrie {
   }
 }
 
-export default function BuildTrie(keys: string[]) {
+export function BuildTrie(keys: string[]): LOUDS;
+export function BuildTrie(data: Buffer, labels: string, terminals: Buffer): LOUDS;
+
+export function BuildTrie(_x: any, _y?: string, _z?: Buffer) {
+  if (_x instanceof Buffer) {
+    return new LOUDS(_x, _y, _z);
+  }
+  const keys = _x;
   const trie = new NaiveTrie();
   keys.forEach(word => trie.add(word));
   const vecSize = trie.nodes * 2 + 1;

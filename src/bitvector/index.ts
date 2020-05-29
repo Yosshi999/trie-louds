@@ -20,12 +20,16 @@ export interface IBitVector {
 }
 
 export class NaiveBitVector implements IBitVector {
-  private ranks: number[] = [];
+  private ranks: Uint32Array;
+  // private ranks: number[];
   data: Buffer;
   length = 0;
 
   constructor(_data: Buffer) {
     this.data = _data;
+    this.length = _data.length * 8;
+    this.ranks = new Uint32Array(this.length);
+    // this.ranks = new Array(this.length);
   }
   build() {
     let r = 0;
@@ -33,7 +37,7 @@ export class NaiveBitVector implements IBitVector {
       let byte = this.data[i];
       for (let j = 0; j < 8; j++) {
         if ((byte & 1) == 1) r++;
-        this.ranks.push(r);
+        this.ranks[i*8 + j] = r;
         byte >>= 1;
       }
     }
