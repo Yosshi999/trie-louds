@@ -3,19 +3,19 @@ import * as bv from '../bitvector';
 class LOUDS {
   vector: bv.IBitVector;
   labels: string = '';
-  terminals: Buffer;
+  terminals: bv.IBitVector;
+  values: number[];
 
-  constructor(data: Buffer, labels: string, terminals: Buffer) {
+  constructor(data: Buffer, labels: string, terminals: Buffer, values: number[]) {
     this.vector = new bv.NaiveBitVector(data);
-    this.vector.build();
     this.labels = labels;
-    this.terminals = terminals;
+    this.terminals = new bv.NaiveBitVector(terminals);
+    this.values = values;
   }
 
-  private isTerminal(labelIdx: number) {
-    const subindex = labelIdx % 8;
-    const byteindex = labelIdx >> 3;
-    return ((this.terminals[byteindex] >> subindex) & 1) == 1;
+  private getTerminalIdx(labelIdx: number): number|null {
+    if(!this.terminals.access(labelIdx)) return null;
+    return this.terminals.rank1(labelIdx);
   }
 
   private getChildrenIdx(parentRank: number) {
@@ -24,7 +24,7 @@ class LOUDS {
     return { begin, end };
   }
 
-  Contains(word: string) {
+  Contains(word: string): number|null {
     let iterRank = 1; // rank1 of root, idx == 0
     for (let i = 0; i < word.length; i++) {
       const { begin, end } = this.getChildrenIdx(iterRank);
@@ -34,75 +34,79 @@ class LOUDS {
 
       const c = word[i];
       const ci = children.indexOf(c);
-      if (ci === -1) return false;
+      if (ci === -1) return null;
 
       iterRank = beginRank + ci;
     }
-    return this.isTerminal(iterRank - 1);
-  }
-}
-
-class NaiveTrie {
-  tree = {};
-  readonly termKey = "$$";
-  readonly rootKey = "^";
-  nodes = 1; // root node
-  constructor() {
-    this.tree[this.rootKey] = {};
-  }
-  add(word: string) {
-    let iter = this.tree[this.rootKey];
-    for (let i = 0; i < word.length; i++) {
-      const c = word[i];
-      if (!(c in iter)) {
-        iter[c] = {};
-        this.nodes++;
-      }
-      iter = iter[c];
+    const idx = this.getTerminalIdx(iterRank - 1);
+    if (idx !== null) {
+      return this.values[idx];
     }
-    iter[this.termKey] = 0;
+    return null;
   }
 }
 
 export function BuildTrie(keys: string[]): LOUDS;
-export function BuildTrie(data: Buffer, labels: string, terminals: Buffer): LOUDS;
+export function BuildTrie(data: Buffer, labels: string, terminals: Buffer, values: number[]): LOUDS;
 
-export function BuildTrie(_x: any, _y?: string, _z?: Buffer) {
+export function BuildTrie(_x: any, _y?: string, _z?: Buffer, _w?: number[]) {
   if (_x instanceof Buffer) {
-    return new LOUDS(_x, _y, _z);
+    return new LOUDS(_x, _y, _z, _w);
   }
-  const keys = _x;
-  const trie = new NaiveTrie();
-  keys.forEach(word => trie.add(word));
-  const vecSize = trie.nodes * 2 + 1;
-  const vec = Buffer.alloc(Math.ceil(vecSize / 8));
-  const term = Buffer.alloc(Math.ceil(trie.nodes / 8));
-  let labels = "-";
+  const keys: string[] = _x;
+  const maxChars = keys.map(x=>x.length).reduce((x,e)=>Math.max(x,e));
 
-  // bfs
-  let veci = 0;
-  let termi = 0;
-  let queue: {}[] = [trie.tree];
-  do {
-    let newQueue: {}[] = [];
-    queue.forEach(iter => {
-      const q = Object.keys(iter);
-      q.sort();
-      q.forEach(c => {
-        if (c.length > 1) return; // skip termKey
-        vec[veci >> 3] |= 1 << (veci % 8);
-        labels += c;
-        // console.log(iter, c);
-        if (trie.termKey in iter[c]) {
-          term[termi >> 3] |= 1 << (termi % 8);
+  const rawVec: boolean[] = [true, false];
+  const rawTerm: boolean[] = [false];
+  const rawValue: number[] = [];
+  const kv = keys.map((value, idx) => ({value, idx}));
+  kv.sort((a, b) => (a.value < b.value ? -1 : 1));
+  let labels = "-^";
+  let queue: {value: string, idx: number}[][] = [kv];
+  for (let i = 0; i < maxChars; i++) {
+    let nextQueue: {value: string, idx: number}[][] = [];
+    queue.forEach(q => {
+      let currNode = "";
+      q.forEach(item => {
+        const word = item.value;
+        if (i < word.length) {
+          const char = word[i];
+          if (currNode !== char) {
+            // new sibling
+            currNode = char;
+            labels += char;
+            nextQueue.push([]);
+            rawVec.push(true);
+            rawTerm.push(false);
+          }
+          if (i === word.length - 1) {
+            // terminate
+            if (!rawTerm[rawTerm.length - 1]) {
+              rawTerm[rawTerm.length - 1] = true;
+              rawValue.push(item.idx);
+            }
+          }
+          if (i < word.length - 1) {
+            nextQueue[nextQueue.length - 1].push(item);
+          }
         }
-        newQueue.push(iter[c]);
-        veci++;
-        termi++;
       });
-      veci++;
+      rawVec.push(false);
     });
-    queue = newQueue;
-  } while (queue.length > 0)
-  return new LOUDS(vec, labels, term);
+
+    queue = nextQueue;
+  }
+
+  // compress
+  const vec = Buffer.alloc(Math.ceil(rawVec.length / 8));
+  const term = Buffer.alloc(Math.ceil(rawTerm.length / 8));
+  function compressor (v: boolean, idx: number) {
+    if (v) {
+      this[idx >> 3] |= 1 << (idx % 8);
+    }
+  }
+  rawVec.forEach(compressor, vec);
+  rawTerm.forEach(compressor, term);
+
+  return new LOUDS(vec, labels, term, rawValue);
 }

@@ -2,7 +2,7 @@ import {BuildTrie} from '.';
 
 describe('trie', () => {
   it('build', () => {
-    const keys = ["an", "i", "of", "one", "our", "out"];
+    const keys = ["an", "i", "of", "one", "out", "our"];
     const trie = BuildTrie(keys);
     expect(trie.labels).toBe("-^aionfnuert");
     expect(trie.vector.data.toString('hex')).toBe(Buffer.from([
@@ -10,21 +10,27 @@ describe('trie', () => {
       0b10001110,
       0b00000110
     ]).toString('hex'));
-    expect(trie.terminals.toString('hex')).toBe(Buffer.from([
+    expect(trie.terminals.data.toString('hex')).toBe(Buffer.from([
       0b00110100,
       0b00000111
     ]).toString('hex'));
-    expect(trie.Contains("an")).toBe(true);
-    expect(trie.Contains("i")).toBe(true);
-    expect(trie.Contains("of")).toBe(true);
-    expect(trie.Contains("one")).toBe(true);
-    expect(trie.Contains("our")).toBe(true);
-    expect(trie.Contains("out")).toBe(true);
+    expect(trie.values.length).toBe(6);
+    expect(trie.terminals.rank1(2)).toBe(0);
+    expect(trie.terminals.rank1(3)).toBe(1);
+    expect(trie.terminals.rank1(4)).toBe(1);
+    expect(trie.terminals.rank1(5)).toBe(2);
 
-    expect(trie.Contains("on")).toBe(false);
-    expect(trie.Contains("")).toBe(false);
-    expect(trie.Contains("ix")).toBe(false);
-    expect(trie.Contains("outo")).toBe(false);
+    expect(trie.Contains("an")).toBe(0);
+    expect(trie.Contains("i")).toBe(1);
+    expect(trie.Contains("of")).toBe(2);
+    expect(trie.Contains("one")).toBe(3);
+    expect(trie.Contains("out")).toBe(4);
+    expect(trie.Contains("our")).toBe(5);
+
+    expect(trie.Contains("on")).toBe(null);
+    expect(trie.Contains("")).toBe(null);
+    expect(trie.Contains("ix")).toBe(null);
+    expect(trie.Contains("outo")).toBe(null);
   });
 
   it('retrieve', () => {
@@ -38,17 +44,17 @@ describe('trie', () => {
       0b00110100,
       0b00000111
     ]);
-    const trie = BuildTrie(data, labels, terminals);
-    expect(trie.Contains("an")).toBe(true);
-    expect(trie.Contains("i")).toBe(true);
-    expect(trie.Contains("of")).toBe(true);
-    expect(trie.Contains("one")).toBe(true);
-    expect(trie.Contains("our")).toBe(true);
-    expect(trie.Contains("out")).toBe(true);
+    const trie = BuildTrie(data, labels, terminals, [1,0,2,3,5,4]);
+    expect(trie.Contains("an")).toBe(0);
+    expect(trie.Contains("i")).toBe(1);
+    expect(trie.Contains("of")).toBe(2);
+    expect(trie.Contains("one")).toBe(3);
+    expect(trie.Contains("out")).toBe(4);
+    expect(trie.Contains("our")).toBe(5);
 
-    expect(trie.Contains("on")).toBe(false);
-    expect(trie.Contains("")).toBe(false);
-    expect(trie.Contains("ix")).toBe(false);
-    expect(trie.Contains("outo")).toBe(false);
+    expect(trie.Contains("on")).toBe(null);
+    expect(trie.Contains("")).toBe(null);
+    expect(trie.Contains("ix")).toBe(null);
+    expect(trie.Contains("outo")).toBe(null);
   });
 });

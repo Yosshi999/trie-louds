@@ -1,16 +1,14 @@
 export interface IBitVector {
-  build(): void;
-
-  /* The number of '1' in [0, index) */
+  /** The number of '1' in [0, index) */
   rank1(index: number): number;
 
-  /* The number of '0' in [0, index) */
+  /** The number of '0' in [0, index) */
   rank0(index: number): number;
 
-  /* Returns minimum idx such that rank1(idx) == num */
+  /** Returns minimum idx such that rank1(idx) == num */
   select1(num: number): number;
 
-  /* Returns minimum idx such that rank0(idx) == num */
+  /** Returns minimum idx such that rank0(idx) == num */
   select0(num: number): number;
 
   access(index: number): boolean;
@@ -30,8 +28,9 @@ export class NaiveBitVector implements IBitVector {
     this.length = _data.length * 8;
     this.ranks = new Uint32Array(this.length);
     // this.ranks = new Array(this.length);
+    this.build();
   }
-  build() {
+  protected build() {
     let r = 0;
     for (let i = 0; i < this.data.length; i++) {
       let byte = this.data[i];
@@ -48,6 +47,7 @@ export class NaiveBitVector implements IBitVector {
     return ((this.data[index >> 3] >> subindex) & 1) == 1;
   }
   rank1(index: number) {
+    if (index === 0) return 0;
     return this.ranks[index - 1];
   }
   rank0(index: number) {
