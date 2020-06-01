@@ -45,3 +45,15 @@ describe('naive bitvector', () => {
     expect(vec.select0(10)).toBe(21);
   });
 });
+
+describe('naive strvector', () => {
+  it('at', () => {
+    const keys = "ai ao aj sea seashore".split(" ");
+    const vec = new bv.NaiveStrVector(keys);
+
+    expect(vec.length).toBe(5);
+    expect(vec.at(0)).toBe("ai");
+    expect(vec.at(3)).toBe("sea");
+    expect(vec.at(4)).toBe("seashore");
+  });
+});

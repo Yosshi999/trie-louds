@@ -95,3 +95,33 @@ export class SuccinctBitVector extends NaiveBitVector {
     return 0;
   }
 }
+
+export interface IStrVector {
+  /** Returns the string at `index` */
+  at(index: number): string;
+
+  length: number;
+  data: string;
+}
+export class NaiveStrVector implements IStrVector {
+  length: number;
+  data: string;
+
+  private indices: Uint32Array;
+  constructor(keys: string[]) {
+    this.data = keys.join("");
+    this.length = keys.length;
+    this.indices = new Uint32Array(this.length+1);
+    let n = 0;
+    keys.forEach((v, idx) => {
+      this.indices[idx] = n;
+      n += v.length;
+    });
+    this.indices[keys.length] = n;
+  }
+  at(index: number) {
+    const begin = this.indices[index];
+    const end = this.indices[index+1];
+    return this.data.slice(begin, end);
+  }
+}

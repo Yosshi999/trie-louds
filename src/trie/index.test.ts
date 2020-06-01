@@ -1,60 +1,29 @@
-import {BuildTrie} from '.';
+import {LOUDS} from '.';
+import {NaiveBitVector} from '../bitvector';
 
-describe('trie', () => {
+describe('LOUDS', () => {
   it('build', () => {
     const keys = ["an", "i", "of", "one", "out", "our"];
-    const trie = BuildTrie(keys);
-    expect(trie.labels).toBe("-^aionfnuert");
+    const trie = new LOUDS(NaiveBitVector);
+    trie.build(keys);
+
+    expect(trie.edge).toBe("aiofnurt");
+    expect(trie.tails.data).toBe("ne");
     expect(trie.vector.data.toString('hex')).toBe(Buffer.from([
-      0b01011101,
-      0b10001110,
-      0b00000110
+      0b00011101,
+      0b11000111,
+      0b00000000
     ]).toString('hex'));
     expect(trie.terminals.data.toString('hex')).toBe(Buffer.from([
-      0b00110100,
-      0b00000111
+      0b11011011
     ]).toString('hex'));
     expect(trie.values.length).toBe(6);
-    expect(trie.terminals.rank1(2)).toBe(0);
-    expect(trie.terminals.rank1(3)).toBe(1);
-    expect(trie.terminals.rank1(4)).toBe(1);
-    expect(trie.terminals.rank1(5)).toBe(2);
 
-    expect(trie.Contains("an")).toBe(0);
-    expect(trie.Contains("i")).toBe(1);
-    expect(trie.Contains("of")).toBe(2);
-    expect(trie.Contains("one")).toBe(3);
-    expect(trie.Contains("out")).toBe(4);
-    expect(trie.Contains("our")).toBe(5);
-
-    expect(trie.Contains("on")).toBe(null);
-    expect(trie.Contains("")).toBe(null);
-    expect(trie.Contains("ix")).toBe(null);
-    expect(trie.Contains("outo")).toBe(null);
-  });
-
-  it('retrieve', () => {
-    const data = Buffer.from([
-      0b01011101,
-      0b10001110,
-      0b00000110
-    ]);
-    const labels = "-^aionfnuert";
-    const terminals = Buffer.from([
-      0b00110100,
-      0b00000111
-    ]);
-    const trie = BuildTrie(data, labels, terminals, [1,0,2,3,5,4]);
-    expect(trie.Contains("an")).toBe(0);
-    expect(trie.Contains("i")).toBe(1);
-    expect(trie.Contains("of")).toBe(2);
-    expect(trie.Contains("one")).toBe(3);
-    expect(trie.Contains("out")).toBe(4);
-    expect(trie.Contains("our")).toBe(5);
-
-    expect(trie.Contains("on")).toBe(null);
-    expect(trie.Contains("")).toBe(null);
-    expect(trie.Contains("ix")).toBe(null);
-    expect(trie.Contains("outo")).toBe(null);
+    const first = trie.getFirstChild(trie.getRoot());
+    expect(trie.getEdge(first)).toBe("a");
+    expect(trie.getTerminal(first).value).toBe(0);
+    expect(trie.getTerminal(first).tail).toBe("n");
+    expect(trie.getFirstChild(first)).toBe(null);
   });
 });
+
