@@ -1,101 +1,156 @@
 import * as bv from '../bitvector';
 
-class LOUDS {
+interface ITrieTree<index_t> {
+  index: index_t;
+  BitVector: new (data: Buffer) => bv.IBitVector;
+
+  getRoot(): index_t;
+  // getParent(idx: index_t): index_t;
+  getFirstChild(idx: index_t): index_t|null;
+  getNextSibling(idx: index_t): index_t|null;
+  getEdge(idx: index_t): string;
+  // findFromChildren(idx: index_t, char: string): index_t;
+  build(keys: string[]): void;
+  getTerminal(idx: index_t): {value: number, tail: string} | null;
+
+  dump(filename: string): void;
+  load(filename: string): void;
+}
+
+export class LOUDS implements ITrieTree<number> {
+  index = 0;
+  BitVector: new (data: Buffer) => bv.IBitVector;
+  StrVector: new (data: string[]) => bv.IStrVector = bv.NaiveStrVector;
+
+  // index
   vector: bv.IBitVector;
-  labels: string = '';
-  terminals: Buffer;
+  // label index
+  edge: string = '';
+  terminals: bv.IBitVector;
+  // leaf index
+  tails: bv.IStrVector;
+  values: number[];
 
-  constructor(data: Buffer, labels: string, terminals: Buffer) {
-    this.vector = new bv.NaiveBitVector(data);
-    this.vector.build();
-    this.labels = labels;
-    this.terminals = terminals;
+  constructor(V: new (data: Buffer) => bv.IBitVector) {
+    this.BitVector = V;
   }
 
-  private isTerminal(labelIdx: number) {
-    const subindex = labelIdx % 8;
-    const byteindex = labelIdx >> 3;
-    return ((this.terminals[byteindex] >> subindex) & 1) == 1;
+  getRoot() {
+    return 0;
   }
-
-  private getChildrenIdx(parentRank: number) {
-    let begin = this.vector.select0(parentRank);
-    let end = this.vector.select0(parentRank + 1) - 1;
-    return { begin, end };
+  getParent(idx: number) {
+    return this.vector.select1(this.vector.rank0(idx));
   }
-
-  Contains(word: string) {
-    let iterRank = 1; // rank1 of root, idx == 0
-    for (let i = 0; i < word.length; i++) {
-      const { begin, end } = this.getChildrenIdx(iterRank);
-      const size = end - begin;
-      const beginRank = this.vector.rank1(begin + 1);
-      const children = this.labels.slice(beginRank, beginRank + size);
-
-      const c = word[i];
-      const ci = children.indexOf(c);
-      if (ci === -1) return false;
-
-      iterRank = beginRank + ci;
+  getFirstChild(idx: number) {
+    const r1 = this.vector.rank1(idx)+1;
+    const child = this.vector.select0(r1);
+    if (this.vector.access(child))
+      return child;
+    else
+      return null;
+  }
+  getNextSibling(idx: number) {
+    if (this.vector.access(idx+1)) {
+      return idx+1;
+    } else {
+      return null;
     }
-    return this.isTerminal(iterRank - 1);
   }
-}
+  getEdge(idx: number) {
+    const labelIdx = this.vector.rank1(idx) - 1;
+    return this.edge[labelIdx];
+  }
 
-class NaiveTrie {
-  tree = {};
-  readonly termKey = "$$";
-  readonly rootKey = "^";
-  nodes = 1; // root node
-  constructor() {
-    this.tree[this.rootKey] = {};
-  }
-  add(word: string) {
-    let iter = this.tree[this.rootKey];
-    for (let i = 0; i < word.length; i++) {
-      const c = word[i];
-      if (!(c in iter)) {
-        iter[c] = {};
-        this.nodes++;
-      }
-      iter = iter[c];
+  getTerminal(idx: number) {
+    const labelIdx = this.vector.rank1(idx) - 1;
+    if (this.terminals.access(labelIdx)) {
+      const leafIdx = this.terminals.rank1(labelIdx);
+      return {value: this.values[leafIdx], tail: this.tails.at(leafIdx)};
     }
-    iter[this.termKey] = 0;
+    else
+      return null;
   }
-}
 
-export default function BuildTrie(keys: string[]) {
-  const trie = new NaiveTrie();
-  keys.forEach(word => trie.add(word));
-  const vecSize = trie.nodes * 2 + 1;
-  const vec = Buffer.alloc(Math.ceil(vecSize / 8));
-  const term = Buffer.alloc(Math.ceil(trie.nodes / 8));
-  let labels = "-";
+  dump(filename: string) {
+    // TODO
+  }
+  load (filename: string) {
+    // TODO
+  }
 
-  // bfs
-  let veci = 0;
-  let termi = 0;
-  let queue: {}[] = [trie.tree];
-  do {
-    let newQueue: {}[] = [];
-    queue.forEach(iter => {
-      const q = Object.keys(iter);
-      q.sort();
-      q.forEach(c => {
-        if (c.length > 1) return; // skip termKey
-        vec[veci >> 3] |= 1 << (veci % 8);
-        labels += c;
-        // console.log(iter, c);
-        if (trie.termKey in iter[c]) {
-          term[termi >> 3] |= 1 << (termi % 8);
-        }
-        newQueue.push(iter[c]);
-        veci++;
-        termi++;
+  build(keys: string[]) {
+    const maxChars = keys.map(x=>x.length).reduce((x,e)=>Math.max(x,e));
+
+    const rawVec: boolean[] = [true, false];
+    const rawTerm: boolean[] = [];
+    const rawValue: number[] = [];
+    const rawTails: string[] = [];
+    const kv = keys.map((value, idx) => ({value, idx}));
+    kv.sort((a, b) => (a.value < b.value ? -1 : 1));
+    this.edge = '';
+    let queue: {value: string, idx: number}[][] = [kv];
+    for (let i = 0; i < maxChars; i++) {
+      let nextQueue: {value: string, idx: number}[][] = [];
+      queue.forEach(q => {
+        let currNode = "";
+        q.forEach(item => {
+          const word = item.value;
+          if (i < word.length) {
+            const char = word[i];
+            if (currNode !== char) {
+              // new sibling
+              currNode = char;
+              this.edge += char;
+              nextQueue.push([]);
+              rawVec.push(true);
+            }
+            nextQueue[nextQueue.length - 1].push(item);
+          }
+        });
+        rawVec.push(false);
       });
-      veci++;
-    });
-    queue = newQueue;
-  } while (queue.length > 0)
-  return new LOUDS(vec, labels, term);
+      // terminal check
+      nextQueue.forEach((q, idx, arr) => {
+        if (q.length === 1) {
+          rawTerm.push(true);
+          rawValue.push(q[0].idx);
+          rawTails.push(q[0].value.slice(i+1));
+          arr[idx] = [];
+        } else {
+          let exist_term = false;
+          q.forEach(item => {
+            if (item.value.length === i) {
+              if (!exist_term) {
+                exist_term = true;
+                rawTerm.push(true);
+                rawValue.push(item.idx);
+                rawTails.push('');
+              }
+            }
+          });
+          if (!exist_term) {
+            rawTerm.push(false);
+          }
+        }
+      });
+
+      queue = nextQueue;
+    }
+
+    // compress
+    const vec = Buffer.alloc(Math.ceil(rawVec.length / 8));
+    const term = Buffer.alloc(Math.ceil(rawTerm.length / 8));
+    function compressor (v: boolean, idx: number) {
+      if (v) {
+        this[idx >> 3] |= 1 << (idx % 8);
+      }
+    }
+    rawVec.forEach(compressor, vec);
+    rawTerm.forEach(compressor, term);
+
+    this.vector = new this.BitVector(vec);
+    this.terminals = new this.BitVector(term);
+    this.values = rawValue;
+    this.tails = new this.StrVector(rawTails);
+  }
 }

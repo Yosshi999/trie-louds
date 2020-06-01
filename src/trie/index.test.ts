@@ -1,29 +1,29 @@
-import BuildTrie from '.';
+import {LOUDS} from '.';
+import {NaiveBitVector} from '../bitvector';
 
-describe('trie', () => {
+describe('LOUDS', () => {
   it('build', () => {
-    const keys = ["an", "i", "of", "one", "our", "out"];
-    const trie = BuildTrie(keys);
-    expect(trie.labels).toBe("-^aionfnuert");
-    expect(trie.vector.data.toString('hex')).toBe(Buffer.from([
-      0b01011101,
-      0b10001110,
-      0b00000110
-    ]).toString('hex'));
-    expect(trie.terminals.toString('hex')).toBe(Buffer.from([
-      0b00110100,
-      0b00000111
-    ]).toString('hex'));
-    expect(trie.Contains("an")).toBe(true);
-    expect(trie.Contains("i")).toBe(true);
-    expect(trie.Contains("of")).toBe(true);
-    expect(trie.Contains("one")).toBe(true);
-    expect(trie.Contains("our")).toBe(true);
-    expect(trie.Contains("out")).toBe(true);
+    const keys = ["an", "i", "of", "one", "out", "our"];
+    const trie = new LOUDS(NaiveBitVector);
+    trie.build(keys);
 
-    expect(trie.Contains("on")).toBe(false);
-    expect(trie.Contains("")).toBe(false);
-    expect(trie.Contains("ix")).toBe(false);
-    expect(trie.Contains("outo")).toBe(false);
+    expect(trie.edge).toBe("aiofnurt");
+    expect(trie.tails.data).toBe("ne");
+    expect(trie.vector.data.toString('hex')).toBe(Buffer.from([
+      0b00011101,
+      0b11000111,
+      0b00000000
+    ]).toString('hex'));
+    expect(trie.terminals.data.toString('hex')).toBe(Buffer.from([
+      0b11011011
+    ]).toString('hex'));
+    expect(trie.values.length).toBe(6);
+
+    const first = trie.getFirstChild(trie.getRoot());
+    expect(trie.getEdge(first)).toBe("a");
+    expect(trie.getTerminal(first).value).toBe(0);
+    expect(trie.getTerminal(first).tail).toBe("n");
+    expect(trie.getFirstChild(first)).toBe(null);
   });
 });
+

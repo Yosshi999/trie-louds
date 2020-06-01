@@ -1,16 +1,14 @@
 export interface IBitVector {
-  build(): void;
-
-  /* The number of '1' in [0, index) */
+  /** The number of '1' in [0, index) */
   rank1(index: number): number;
 
-  /* The number of '0' in [0, index) */
+  /** The number of '0' in [0, index) */
   rank0(index: number): number;
 
-  /* Returns minimum idx such that rank1(idx) == num */
+  /** Returns minimum idx such that rank1(idx) == num */
   select1(num: number): number;
 
-  /* Returns minimum idx such that rank0(idx) == num */
+  /** Returns minimum idx such that rank0(idx) == num */
   select0(num: number): number;
 
   access(index: number): boolean;
@@ -20,20 +18,25 @@ export interface IBitVector {
 }
 
 export class NaiveBitVector implements IBitVector {
-  private ranks: number[] = [];
+  private ranks: Uint32Array;
+  // private ranks: number[];
   data: Buffer;
   length = 0;
 
   constructor(_data: Buffer) {
     this.data = _data;
+    this.length = _data.length * 8;
+    this.ranks = new Uint32Array(this.length);
+    // this.ranks = new Array(this.length);
+    this.build();
   }
-  build() {
+  protected build() {
     let r = 0;
     for (let i = 0; i < this.data.length; i++) {
       let byte = this.data[i];
       for (let j = 0; j < 8; j++) {
         if ((byte & 1) == 1) r++;
-        this.ranks.push(r);
+        this.ranks[i*8 + j] = r;
         byte >>= 1;
       }
     }
@@ -44,6 +47,7 @@ export class NaiveBitVector implements IBitVector {
     return ((this.data[index >> 3] >> subindex) & 1) == 1;
   }
   rank1(index: number) {
+    if (index === 0) return 0;
     return this.ranks[index - 1];
   }
   rank0(index: number) {
@@ -89,5 +93,35 @@ export class SuccinctBitVector extends NaiveBitVector {
   }
   rank1(index: number) {
     return 0;
+  }
+}
+
+export interface IStrVector {
+  /** Returns the string at `index` */
+  at(index: number): string;
+
+  length: number;
+  data: string;
+}
+export class NaiveStrVector implements IStrVector {
+  length: number;
+  data: string;
+
+  private indices: Uint32Array;
+  constructor(keys: string[]) {
+    this.data = keys.join("");
+    this.length = keys.length;
+    this.indices = new Uint32Array(this.length+1);
+    let n = 0;
+    keys.forEach((v, idx) => {
+      this.indices[idx] = n;
+      n += v.length;
+    });
+    this.indices[keys.length] = n;
+  }
+  at(index: number) {
+    const begin = this.indices[index];
+    const end = this.indices[index+1];
+    return this.data.slice(begin, end);
   }
 }
