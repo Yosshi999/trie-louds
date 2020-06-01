@@ -25,5 +25,42 @@ describe('LOUDS', () => {
     expect(trie.getTerminal(first).tail).toBe("n");
     expect(trie.getFirstChild(first)).toBe(null);
   });
+
+  it('build2', () => {
+    const keys = ["an", "ans"];
+    const trie = new LOUDS(NaiveBitVector);
+    trie.build(keys);
+
+    const first = trie.getFirstChild(trie.getRoot());
+    expect(trie.getEdge(first)).toBe("a");
+    expect(trie.getNextSibling(first)).toBe(null);
+    expect(trie.getTerminal(first)).toBe(null);
+    const an = trie.getFirstChild(first);
+    expect(trie.getEdge(an)).toBe("n");
+    expect(trie.getTerminal(an).tail).toBe("");
+    expect(trie.getNextSibling(an)).toBe(null);
+    const ans = trie.getFirstChild(an);
+    expect(trie.getEdge(ans)).toBe("s");
+    expect(trie.getFirstChild(ans)).toBe(null);
+    expect(trie.getTerminal(ans).tail).toBe("");
+  });
+
+  it('build3', () => {
+    const keys = ["an", "answer"];
+    const trie = new LOUDS(NaiveBitVector);
+    trie.build(keys);
+
+    const first = trie.getFirstChild(trie.getRoot());
+    expect(trie.getEdge(first)).toBe("a");
+    expect(trie.getNextSibling(first)).toBe(null);
+    const an = trie.getFirstChild(first);
+    expect(trie.getEdge(an)).toBe("n");
+    expect(trie.getTerminal(an).tail).toBe("");
+    expect(trie.getNextSibling(an)).toBe(null);
+    const ans = trie.getFirstChild(an);
+    expect(trie.getEdge(ans)).toBe("s");
+    expect(trie.getFirstChild(ans)).toBe(null);
+    expect(trie.getTerminal(ans).tail).toBe("wer");
+  });
 });
 

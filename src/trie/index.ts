@@ -119,7 +119,7 @@ export class LOUDS implements ITrieTree<number> {
         } else {
           let exist_term = false;
           q.forEach(item => {
-            if (item.value.length === i) {
+            if (item.value.length-1 === i) {
               if (!exist_term) {
                 exist_term = true;
                 rawTerm.push(true);
