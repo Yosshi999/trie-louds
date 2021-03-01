@@ -1,7 +1,6 @@
 import * as bv from '../bitvector';
 
-interface ITrieTree<index_t> {
-  index: index_t;
+interface ITrieBackend<index_t> {
   BitVector: new (data: Buffer) => bv.IBitVector;
 
   getRoot(): index_t;
@@ -9,18 +8,16 @@ interface ITrieTree<index_t> {
   getFirstChild(idx: index_t): index_t|null;
   getNextSibling(idx: index_t): index_t|null;
   getEdge(idx: index_t): string;
-  // findFromChildren(idx: index_t, char: string): index_t;
   build(keys: string[]): void;
   getTerminal(idx: index_t): {value: number, tail: string} | null;
 
-  dump(filename: string): void;
-  load(filename: string): void;
+  dump(): Buffer;
+  load(buf: Buffer, offset: number): number;
 }
 
-export class LOUDS implements ITrieTree<number> {
-  index = 0;
-  BitVector: new (data: Buffer) => bv.IBitVector;
-  StrVector: new (data: string[]) => bv.IStrVector = bv.NaiveStrVector;
+export class LoudsBackend implements ITrieBackend<number> {
+  BitVector: new (data?: Buffer) => bv.IBitVector;
+  StrVector: new (data?: string[]) => bv.IStrVector = bv.NaiveStrVector;
 
   // index
   vector: bv.IBitVector;
@@ -33,14 +30,18 @@ export class LOUDS implements ITrieTree<number> {
 
   constructor(V: new (data: Buffer) => bv.IBitVector) {
     this.BitVector = V;
+    this.vector = new this.BitVector();
+    this.terminals = new this.BitVector();
+    this.values = [];
+    this.tails = new this.StrVector();
   }
 
   getRoot() {
     return 0;
   }
-  getParent(idx: number) {
-    return this.vector.select1(this.vector.rank0(idx));
-  }
+  // getParent(idx: number) {
+  //   return this.vector.select1(this.vector.rank0(idx));
+  // }
   getFirstChild(idx: number) {
     const r1 = this.vector.rank1(idx)+1;
     const child = this.vector.select0(r1);
@@ -71,11 +72,38 @@ export class LOUDS implements ITrieTree<number> {
       return null;
   }
 
-  dump(filename: string) {
-    // TODO
+  dump() {
+    const edgeBuffer = Buffer.from(this.edge);
+    const edgeLengthBuffer = Buffer.allocUnsafe(4);
+    edgeLengthBuffer.writeUInt32LE(edgeBuffer.length);
+    const valuesBuffer = Buffer.allocUnsafe(4 * this.values.length);
+    this.values.forEach((v, i) => {
+      valuesBuffer.writeInt32LE(v, i*4);
+    });
+    const valuesLengthBuffer = Buffer.allocUnsafe(4);
+    valuesLengthBuffer.writeUInt32LE(valuesBuffer.length);
+
+    return Buffer.concat([
+      this.vector.dump(),
+      edgeLengthBuffer, edgeBuffer,
+      this.terminals.dump(),
+      this.tails.dump(),
+      valuesLengthBuffer, valuesBuffer
+    ]);
   }
-  load (filename: string) {
-    // TODO
+  load(buf: Buffer, offset: number) {
+    offset = this.vector.load(buf, offset);
+    const edgeLength = buf.readUInt32LE(offset); offset += 4;
+    this.edge = buf.slice(offset, offset + edgeLength).toString(); offset += edgeLength;
+    offset = this.terminals.load(buf, offset);
+    offset = this.tails.load(buf, offset);
+    const valuesLength = buf.readUInt32LE(offset); offset += 4;
+    this.values = Array(valuesLength/4);
+    for (let i = 0; i < valuesLength/4; i += 1) {
+      this.values[i] = buf.readInt32LE(offset + i*4);
+    }
+    offset += valuesLength;
+    return offset;
   }
 
   build(keys: string[]) {

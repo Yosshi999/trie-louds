@@ -15,6 +15,9 @@ export interface IBitVector {
 
   length: number;
   data: Buffer;
+
+  dump(): Buffer;
+  load(buf: Buffer, offset: number): number;
 }
 
 export class NaiveBitVector implements IBitVector {
@@ -23,7 +26,40 @@ export class NaiveBitVector implements IBitVector {
   data: Buffer;
   length = 0;
 
-  constructor(_data: Buffer) {
+  dump() {
+    const lengthBuffer = Buffer.allocUnsafe(4);
+    lengthBuffer.writeUInt32LE(this.length);
+    const dataLengthBuffer = Buffer.allocUnsafe(4);
+    dataLengthBuffer.writeUInt32LE(this.data.length);
+    const ranksBuffer = Buffer.allocUnsafe(4 * this.ranks.length);
+    this.ranks.forEach((v, i) => {
+      ranksBuffer.writeUInt32LE(v, i*4);
+    });
+    const ranksLengthBuffer = Buffer.allocUnsafe(4);
+    ranksLengthBuffer.writeUInt32LE(ranksBuffer.length);
+
+    return Buffer.concat([
+      lengthBuffer,
+      dataLengthBuffer, this.data,
+      ranksLengthBuffer, ranksBuffer
+    ]);
+  }
+
+  load(buf: Buffer, offset: number) {
+    this.length = buf.readUInt32LE(offset); offset += 4;
+    const dataLength = buf.readUInt32LE(offset); offset += 4;
+    this.data = buf.slice(offset, offset + dataLength); offset += dataLength;
+    const ranksLength = buf.readUInt32LE(offset); offset += 4;
+    const ranks = Array(ranksLength / 4);
+    for (let i = 0; i < ranksLength / 4; i += 1) {
+      ranks[i] = buf.readUInt32LE(offset + i*4);
+    }
+    this.ranks = new Uint32Array(ranks); offset += ranksLength;
+    return offset;
+  }
+
+  constructor(_data?: Buffer) {
+    if (typeof _data === "undefined") return;
     this.data = _data;
     this.length = _data.length * 8;
     this.ranks = new Uint32Array(this.length);
@@ -87,14 +123,15 @@ export class NaiveBitVector implements IBitVector {
   }
 }
 
-export class SuccinctBitVector extends NaiveBitVector {
-  build() {
+// not implemented yet
+// export class SuccinctBitVector extends NaiveBitVector {
+//   build() {
 
-  }
-  rank1(index: number) {
-    return 0;
-  }
-}
+//   }
+//   rank1(index: number) {
+//     return 0;
+//   }
+// }
 
 export interface IStrVector {
   /** Returns the string at `index` */
@@ -102,13 +139,49 @@ export interface IStrVector {
 
   length: number;
   data: string;
+
+  dump(): Buffer;
+  load(buf: Buffer, offset: number): number;
 }
 export class NaiveStrVector implements IStrVector {
   length: number;
   data: string;
-
   private indices: Uint32Array;
-  constructor(keys: string[]) {
+
+  dump() {
+    const lengthBuffer = Buffer.allocUnsafe(4);
+    lengthBuffer.writeUInt32LE(this.length);
+    const dataBuffer = Buffer.from(this.data);
+    const dataLengthBuffer = Buffer.allocUnsafe(4);
+    dataLengthBuffer.writeUInt32LE(dataBuffer.length);
+    const indicesBuffer = Buffer.allocUnsafe(4 * this.indices.length);
+    this.indices.forEach((v, i) => {
+      indicesBuffer.writeUInt32LE(v, i*4);
+    });
+    const indicesLengthBuffer = Buffer.allocUnsafe(4);
+    indicesLengthBuffer.writeUInt32LE(indicesBuffer.length);
+    return Buffer.concat([
+      lengthBuffer,
+      dataLengthBuffer, dataBuffer,
+      indicesLengthBuffer, indicesBuffer
+    ]);
+  }
+
+  load(buf: Buffer, offset: number) {
+    this.length = buf.readUInt32LE(offset); offset += 4;
+    const dataLength = buf.readUInt32LE(offset); offset += 4;
+    this.data = buf.slice(offset, offset+dataLength).toString(); offset += dataLength;
+    const indicesLength = buf.readUInt32LE(offset); offset += 4;
+    const indices = Array(indicesLength / 4);
+    for (let i = 0; i < indicesLength / 4; i += 1) {
+      indices[i] = buf.readUInt32LE(offset + i*4);
+    }
+    this.indices = new Uint32Array(indices); offset += indicesLength;
+    return offset;
+  }
+
+  constructor(keys?: string[]) {
+    if (typeof keys === "undefined") return;
     this.data = keys.join("");
     this.length = keys.length;
     this.indices = new Uint32Array(this.length+1);

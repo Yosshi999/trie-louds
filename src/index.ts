@@ -1,13 +1,34 @@
 import * as bv from './bitvector';
 import * as trie from './trie';
+import * as fs from 'fs';
 
 export class ReadonlyTrieTree {
-  tree: trie.LOUDS;
+  tree: trie.LoudsBackend;
   length: number;
-  constructor(keys: string[]) {
-    this.tree = new trie.LOUDS(bv.NaiveBitVector);
-    this.tree.build(keys);
-    this.length = keys.length;
+  constructor(keys?: string[]) {
+    this.tree = new trie.LoudsBackend(bv.NaiveBitVector);
+    if (typeof keys !== "undefined") {
+      this.tree.build(keys);
+      this.length = keys.length;
+    }
+  }
+
+  dumpFileSync(filename: string) {
+    const lengthBuffer = Buffer.allocUnsafe(4);
+    lengthBuffer.writeUInt32LE(this.length);
+    const buf = Buffer.concat([
+      lengthBuffer,
+      this.tree.dump()
+    ]);
+    fs.writeFileSync(filename, buf);
+  }
+
+  static loadFileSync(filename: string) {
+    const buf = fs.readFileSync(filename);
+    const ret = new this();
+    ret.length = buf.readUInt32LE(0);
+    ret.tree.load(buf, 4);
+    return ret;
   }
 
   private dfs(suffix: string, iter: number): {suffix: string, iter: number}|null {
@@ -57,8 +78,12 @@ export class ReadonlyTrieTree {
       const term = this.tree.getTerminal(result.iter);
       if (term !== null && term.tail === result.suffix) {
         return [prefix];
+      } else {
+        return [];
       }
     }
+
+    // can step more
     const func = (iter: number, prefix: string, words: string[]) => {
       const term = this.tree.getTerminal(iter);
       if (term !== null) {
