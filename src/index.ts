@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
-  length: number;
+  length: number = 0;
   constructor(keys?: string[]) {
     this.tree = new trie.LoudsBackend(bv.NaiveBitVector);
     if (typeof keys !== "undefined") {
@@ -42,10 +42,10 @@ export class ReadonlyTrieTree {
     }
 
     // has at least one child
-    for (iter = begin; iter !== null; iter = this.tree.getNextSibling(iter)) {
-      if (this.tree.getEdge(iter) === suffix[0]) {
+    for (let _iter: number|null = begin; _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
+      if (this.tree.getEdge(_iter) === suffix[0]) {
         // step deeper
-        return this.dfs(suffix.slice(1), iter);
+        return this.dfs(suffix.slice(1), _iter);
       }
     }
     // cannot step anymore
@@ -90,12 +90,12 @@ export class ReadonlyTrieTree {
         // has word
         words.push(prefix + term.tail);
       }
-      for (iter = this.tree.getFirstChild(iter); iter !== null; iter = this.tree.getNextSibling(iter)) {
-        func(iter, prefix+this.tree.getEdge(iter), words);
+      for (let _iter = this.tree.getFirstChild(iter); _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
+        func(_iter, prefix+this.tree.getEdge(_iter), words);
       }
     };
 
-    const words = [];
+    const words: string[] = [];
     func(result.iter, prefix, words);
     return words;
   }

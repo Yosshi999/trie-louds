@@ -21,9 +21,9 @@ export interface IBitVector {
 }
 
 export class NaiveBitVector implements IBitVector {
-  private ranks: Uint32Array;
+  private ranks: Uint32Array = new Uint32Array();
   // private ranks: number[];
-  data: Buffer;
+  data: Buffer = Buffer.alloc(0);
   length = 0;
 
   dump() {
@@ -144,9 +144,9 @@ export interface IStrVector {
   load(buf: Buffer, offset: number): number;
 }
 export class NaiveStrVector implements IStrVector {
-  length: number;
-  data: string;
-  private indices: Uint32Array;
+  length: number = 0;
+  data: string = "";
+  private indices: Uint32Array = new Uint32Array();
 
   dump() {
     const lengthBuffer = Buffer.allocUnsafe(4);

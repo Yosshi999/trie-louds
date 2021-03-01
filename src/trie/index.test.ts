@@ -1,3 +1,4 @@
+import { assert } from 'console';
 import {LoudsBackend} from '.';
 import {NaiveBitVector} from '../bitvector';
 
@@ -25,10 +26,10 @@ function testLouds(withDump: boolean) {
       ]).toString('hex'));
       expect(trie.values.length).toBe(6);
   
-      const first = trie.getFirstChild(trie.getRoot());
+      const first = trie.getFirstChild(trie.getRoot())!;
       expect(trie.getEdge(first)).toBe("a");
-      expect(trie.getTerminal(first).value).toBe(0);
-      expect(trie.getTerminal(first).tail).toBe("n");
+      expect(trie.getTerminal(first)!.value).toBe(0);
+      expect(trie.getTerminal(first)!.tail).toBe("n");
       expect(trie.getFirstChild(first)).toBe(null);
     });
   
@@ -42,18 +43,18 @@ function testLouds(withDump: boolean) {
         trie.load(buf, 0);
       }
   
-      const first = trie.getFirstChild(trie.getRoot());
+      const first = trie.getFirstChild(trie.getRoot())!;
       expect(trie.getEdge(first)).toBe("a");
       expect(trie.getNextSibling(first)).toBe(null);
       expect(trie.getTerminal(first)).toBe(null);
-      const an = trie.getFirstChild(first);
+      const an = trie.getFirstChild(first)!;
       expect(trie.getEdge(an)).toBe("n");
-      expect(trie.getTerminal(an).tail).toBe("");
+      expect(trie.getTerminal(an)!.tail).toBe("");
       expect(trie.getNextSibling(an)).toBe(null);
-      const ans = trie.getFirstChild(an);
+      const ans = trie.getFirstChild(an)!;
       expect(trie.getEdge(ans)).toBe("s");
       expect(trie.getFirstChild(ans)).toBe(null);
-      expect(trie.getTerminal(ans).tail).toBe("");
+      expect(trie.getTerminal(ans)!.tail).toBe("");
     });
   
     it('build3', () => {
@@ -66,17 +67,17 @@ function testLouds(withDump: boolean) {
         trie.load(buf, 0);
       }
   
-      const first = trie.getFirstChild(trie.getRoot());
+      const first = trie.getFirstChild(trie.getRoot())!;
       expect(trie.getEdge(first)).toBe("a");
       expect(trie.getNextSibling(first)).toBe(null);
-      const an = trie.getFirstChild(first);
+      const an = trie.getFirstChild(first)!;
       expect(trie.getEdge(an)).toBe("n");
-      expect(trie.getTerminal(an).tail).toBe("");
+      expect(trie.getTerminal(an)!.tail).toBe("");
       expect(trie.getNextSibling(an)).toBe(null);
-      const ans = trie.getFirstChild(an);
+      const ans = trie.getFirstChild(an)!;
       expect(trie.getEdge(ans)).toBe("s");
       expect(trie.getFirstChild(ans)).toBe(null);
-      expect(trie.getTerminal(ans).tail).toBe("wer");
+      expect(trie.getTerminal(ans)!.tail).toBe("wer");
     });
   };
 }

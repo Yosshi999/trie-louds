@@ -28,7 +28,7 @@ export class LoudsBackend implements ITrieBackend<number> {
   tails: bv.IStrVector;
   values: number[];
 
-  constructor(V: new (data: Buffer) => bv.IBitVector) {
+  constructor(V: new (data?: Buffer) => bv.IBitVector) {
     this.BitVector = V;
     this.vector = new this.BitVector();
     this.terminals = new this.BitVector();
@@ -168,7 +168,7 @@ export class LoudsBackend implements ITrieBackend<number> {
     // compress
     const vec = Buffer.alloc(Math.ceil(rawVec.length / 8));
     const term = Buffer.alloc(Math.ceil(rawTerm.length / 8));
-    function compressor (v: boolean, idx: number) {
+    function compressor (this: Buffer, v: boolean, idx: number) {
       if (v) {
         this[idx >> 3] |= 1 << (idx % 8);
       }

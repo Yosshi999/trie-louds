@@ -1,7 +1,7 @@
 const dummyFiles = new Map();
 jest.mock('fs', () => ({
-  readFileSync: (path) => dummyFiles.get(path),
-  writeFileSync: ((path, data) => {dummyFiles.set(path, data);})
+  readFileSync: (path: string) => dummyFiles.get(path),
+  writeFileSync: ((path: string, data: any) => {dummyFiles.set(path, data);})
 }));
 import {ReadonlyTrieTree} from '.';
 
