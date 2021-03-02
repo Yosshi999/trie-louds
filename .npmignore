@@ -1,0 +1,7 @@
+src/
+coverage/
+examples/
+.editorconfig
+.eslintrc.json
+jest.config.js
+tsconfig.json
