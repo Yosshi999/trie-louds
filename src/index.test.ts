@@ -5,11 +5,18 @@ jest.mock('fs', () => ({
 }));
 import {ReadonlyTrieTree} from '.';
 
-function testTrie(withDump: boolean) {
+function testTrie(withDump: boolean, fromDataIndices: boolean) {
   return () => {
     it('build', () => {
       const keys = ["an", "i", "of", "one", "out", "our"];
-      let trie = new ReadonlyTrieTree(keys);
+      let trie: ReadonlyTrieTree;
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie = new ReadonlyTrieTree(keys);
+      }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
         trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
@@ -35,7 +42,14 @@ function testTrie(withDump: boolean) {
     
     it('build2', () => {
       const keys = ["apple", "apples"];
-      let trie = new ReadonlyTrieTree(keys);
+      let trie: ReadonlyTrieTree;
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie = new ReadonlyTrieTree(keys);
+      }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
         trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
@@ -50,7 +64,14 @@ function testTrie(withDump: boolean) {
     
     it('build3', () => {
       const keys = ["an", "answer"];
-      let trie = new ReadonlyTrieTree(keys);
+      let trie: ReadonlyTrieTree;
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie = new ReadonlyTrieTree(keys);
+      }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
         trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
@@ -66,7 +87,14 @@ function testTrie(withDump: boolean) {
     
     it('getwords', () => {
       const keys = "She sell sells seashells by the seashore".split(" ");
-      let trie = new ReadonlyTrieTree(keys);
+      let trie: ReadonlyTrieTree;
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie = new ReadonlyTrieTree(keys);
+      }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
         trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
@@ -86,5 +114,8 @@ function testTrie(withDump: boolean) {
     });
   };
 }
-describe('readonly trie tree', testTrie(false));
-describe('readonly trie tree with dump', testTrie(true));
+describe('readonly trie tree', testTrie(false, false));
+describe('readonly trie tree from dataIndices', testTrie(false, true));
+describe('readonly trie tree with dump', testTrie(true, false));
+describe('readonly trie tree from dataIndices with dump', testTrie(true, true));
+

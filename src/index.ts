@@ -1,6 +1,7 @@
 import * as bv from './bitvector';
 import * as trie from './trie';
 import * as fs from 'fs';
+import { assert } from 'console';
 
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
@@ -11,6 +12,13 @@ export class ReadonlyTrieTree {
       this.tree.build(keys);
       this.length = keys.length;
     }
+  }
+  
+  static fromDataIndices(data: string, indices: Uint32Array) {
+    const obj = new this();
+    obj.tree.buildFromDataIndices(data, indices);
+    obj.length = indices.length - 1;
+    return obj;
   }
 
   dumpFileSync(filename: string) {

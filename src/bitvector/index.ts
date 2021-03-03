@@ -146,7 +146,7 @@ export interface IStrVector {
 export class NaiveStrVector implements IStrVector {
   length: number = 0;
   data: string = "";
-  private indices: Uint32Array = new Uint32Array();
+  indices: Uint32Array = new Uint32Array();
 
   dump() {
     const lengthBuffer = Buffer.allocUnsafe(4);
@@ -192,6 +192,15 @@ export class NaiveStrVector implements IStrVector {
     });
     this.indices[keys.length] = n;
   }
+
+  static fromDataIndices(data: string, indices: Uint32Array) {
+    const obj = new this();
+    obj.data = data;
+    obj.indices = indices;
+    obj.length = indices.length - 1;
+    return obj;
+  }
+
   at(index: number) {
     const begin = this.indices[index];
     const end = this.indices[index+1];

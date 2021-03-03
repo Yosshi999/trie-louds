@@ -2,12 +2,18 @@ import { assert } from 'console';
 import {LoudsBackend} from '.';
 import {NaiveBitVector} from '../bitvector';
 
-function testLouds(withDump: boolean) {
+function testLouds(withDump: boolean, fromDataIndices: boolean) {
   return () => {
     it('build', () => {
       const keys = ["an", "i", "of", "one", "out", "our"];
       let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
         trie = new LoudsBackend(NaiveBitVector);
@@ -36,7 +42,13 @@ function testLouds(withDump: boolean) {
     it('build2', () => {
       const keys = ["an", "ans"];
       let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
         trie = new LoudsBackend(NaiveBitVector);
@@ -60,7 +72,13 @@ function testLouds(withDump: boolean) {
     it('build3', () => {
       const keys = ["an", "answer"];
       let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
         trie = new LoudsBackend(NaiveBitVector);
@@ -81,6 +99,8 @@ function testLouds(withDump: boolean) {
     });
   };
 }
-describe('LOUDS', testLouds(false));
-describe('LOUDS with dump', testLouds(true));
+describe('LOUDS', testLouds(false, false));
+describe('LOUDS from dataIndices', testLouds(false, true));
+describe('LOUDS with dump', testLouds(true, false));
+describe('LOUDS from dataIndices with dump', testLouds(true, true));
 
