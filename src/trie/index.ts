@@ -115,6 +115,7 @@ class NumberDoubleList {
   pushEmptyList() {
     assert(this.delimIdx < this.capacity + 1);
     this.delimIdx++;
+    this.delim[this.delimIdx] = this.idx;
   }
   pushList(x: Uint32Array | number[]) {
     this.pushEmptyList();
