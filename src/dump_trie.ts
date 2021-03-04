@@ -1,6 +1,7 @@
 import yargs from 'yargs';
-import { readFileSync, writeFileSync } from 'fs';
+import { createReadStream, writeFileSync } from 'fs';
 import {ReadonlyTrieTree} from '.';
+import { createInterface } from 'readline';
 
 const argv = yargs
   .option('input', {
@@ -16,9 +17,49 @@ const argv = yargs
   .help()
   .argv;
 
-const keywords = readFileSync(argv.input).toString().trim().split("\n");
-const tree = new ReadonlyTrieTree(keywords);
-console.log(`loaded ${keywords.length} words.`);
-console.log(`first 3 words: ${keywords.slice(0,3)}`);
+(async () => {
+  let byteLength = 0;
+  let entries = 0;
 
-tree.dumpFileSync(argv.output);
+  await new Promise((resolve, reject) => {
+    const stream = createReadStream(argv.input);
+    const reader = createInterface(stream);
+    reader.on('line', (inpt) => {
+      if (inpt.length === 0) return;
+      entries++;
+      byteLength += Buffer.from(inpt, 'ucs2').byteLength;
+    })
+    reader.on('close', resolve);
+  });
+  console.log(`found ${entries} entries.`);
+
+  let data = "";
+  const indices = new Uint32Array(entries + 1);
+  indices[0] = 0;
+  await new Promise((resolve, reject) => {
+    const buf = Buffer.allocUnsafe(byteLength);
+
+    const stream = createReadStream(argv.input);
+    const reader = createInterface(stream);
+    let i = 0;
+    let wrote = 0;
+    reader.on('line', (inpt) => {
+      if (inpt.length === 0) return;
+      i++;
+      indices[i] = indices[i-1] + inpt.length;
+      const word = Buffer.from(inpt, 'ucs2');
+      buf.set(word, wrote);
+      wrote += word.length;
+    });
+    reader.on('close', () => {
+      data = buf.toString('ucs2');
+      resolve(true);
+    });
+  });
+
+  console.log(`loaded ${entries} words.`);
+  const tree = ReadonlyTrieTree.fromDataIndices(data, indices);
+  console.log(`finish building Trie.`);
+  tree.dumpFileSync(argv.output);
+})();
+
