@@ -50,11 +50,11 @@ export class NaiveBitVector implements IBitVector {
     const dataLength = buf.readUInt32LE(offset); offset += 4;
     this.data = buf.slice(offset, offset + dataLength); offset += dataLength;
     const ranksLength = buf.readUInt32LE(offset); offset += 4;
-    const ranks = Array(ranksLength / 4);
+    this.ranks = new Uint32Array(ranksLength / 4);
     for (let i = 0; i < ranksLength / 4; i += 1) {
-      ranks[i] = buf.readUInt32LE(offset + i*4);
+      this.ranks[i] = buf.readUInt32LE(offset + i*4);
     }
-    this.ranks = new Uint32Array(ranks); offset += ranksLength;
+    offset += ranksLength;
     return offset;
   }
 
@@ -172,11 +172,11 @@ export class NaiveStrVector implements IStrVector {
     const dataLength = buf.readUInt32LE(offset); offset += 4;
     this.data = buf.slice(offset, offset+dataLength).toString(); offset += dataLength;
     const indicesLength = buf.readUInt32LE(offset); offset += 4;
-    const indices = Array(indicesLength / 4);
+    this.indices = new Uint32Array(indicesLength / 4);
     for (let i = 0; i < indicesLength / 4; i += 1) {
-      indices[i] = buf.readUInt32LE(offset + i*4);
+      this.indices[i] = buf.readUInt32LE(offset + i*4);
     }
-    this.indices = new Uint32Array(indices); offset += indicesLength;
+    offset += indicesLength;
     return offset;
   }
 
