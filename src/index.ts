@@ -14,10 +14,19 @@ export class ReadonlyTrieTree {
     }
   }
   
-  static fromDataIndices(data: string, indices: Uint32Array) {
+  static fromDataIndices(data: string, indices: Uint32Array, verbose?: boolean) {
     const obj = new this();
+    if (verbose) obj.tree.verbose = true;
     obj.tree.buildFromDataIndices(data, indices);
     obj.length = indices.length - 1;
+    return obj;
+  }
+
+  static fromKeywordList(keys: string[], verbose?: boolean) {
+    const obj = new this();
+    if (verbose) obj.tree.verbose = true;
+    obj.tree.build(keys);
+    obj.length = keys.length;
     return obj;
   }
 

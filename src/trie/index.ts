@@ -151,6 +151,9 @@ class NumberDoubleList {
     this.data.fill(0);
     this.delim.fill(0);
   }
+  empty() {
+    return this.delimIdx === 0;
+  }
 }
 
 export class LoudsBackend implements ITrieBackend<number> {
@@ -272,53 +275,34 @@ export class LoudsBackend implements ITrieBackend<number> {
     const maxChars = dataLengths.reduce((x,e)=>Math.max(x,e));
     if (this.verbose) console.log("maxChars:", maxChars);
     
-    const bucket = new Uint32Array(65536);
-    const accumBucket = new Uint32Array(65536);
+    const ords = new Uint16Array(indices.length);
     queue.pushList(indices);
-    for (let i = 0; i < maxChars; i++) {
+    for (let i = 0; i < maxChars && !queue.empty(); i++) {
       if (this.verbose) console.log(`char ${i}`);
       nextQueue.clear();
-      let accum = 0;
+      queue.data.forEach(v => {ords[v] = data.charCodeAt(dataIndices[v] + i);});
+
       let sublen = 0;
       for (let j = 0; j < queue.delimIdx; j++) {
-        bucket.fill(0);
         const sub = queue.atList(j);
         sublen = Math.max(sublen, sub.length);
-        if (sub.length === 1) {
-          const ord = data.charCodeAt(dataIndices[sub[0]] + i);
-          edgeBuffer[edgeBufferIdx++] = ord % 256;
-          edgeBuffer[edgeBufferIdx++] = ord >> 8;
-          rawVec.push(true);
-          nextQueue.delim[nextQueue.delimIdx++] = accum;
-          nextQueue.data[accum] = sub[0];
-          accum++;
-          nextQueue.idx++;
-        } else if (sub.length > 1) {
-          sub.forEach(w => {
-            const ord = data.charCodeAt(dataIndices[w] + i);
-            bucket[ord]++;
-          });
-          for (let b = 0; b < 65536; b++) {
-            if (bucket[b] > 0) {
-              edgeBuffer[edgeBufferIdx++] = b % 256;
-              edgeBuffer[edgeBufferIdx++] = b >> 8;
-              rawVec.push(true);
-              nextQueue.delim[nextQueue.delimIdx++] = accum;
-            }
-            accumBucket[b] = accum;
-            accum += bucket[b];
-          }
-        }
-        rawVec.push(false);
-        nextQueue.delim[nextQueue.delimIdx] = accum;
-
         if (sub.length > 1) {
-          sub.forEach(w => {
-            const ord = data.charCodeAt(dataIndices[w] + i);
-            nextQueue.data[accumBucket[ord]++] = w;
-            nextQueue.idx++;
-          });
+          sub.sort((a, b) => (ords[a] - ords[b]));
         }
+
+        let currNode = 0;
+        sub.forEach(w => {
+          const ord = ords[w];
+          if (currNode !== ord) {
+            currNode = ord;
+            edgeBuffer[edgeBufferIdx++] = ord & 255;
+            edgeBuffer[edgeBufferIdx++] = ord >> 8;
+            nextQueue.pushEmptyList();
+            rawVec.push(true);
+          }
+          nextQueue.push(w);
+        });
+        rawVec.push(false);
       }
       if (this.verbose) console.log(queue.delimIdx, nextQueue.delimIdx, sublen);
       // terminal check
