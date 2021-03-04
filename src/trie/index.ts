@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { BigIntStats } from 'fs';
 import * as bv from '../bitvector';
 
 interface ITrieBackend<index_t> {
@@ -74,13 +75,17 @@ class BitList {
 }
 
 class StrList {
-  data: string;
+  data: Buffer;
+  dataIdx: number;
+  charIdx: number;
   indices: Uint32Array;
   capacity: number;
   idx: number;
 
-  constructor(capacity: number) {
-    this.data = "";
+  constructor(capacity: number, strCapacity: number) {
+    this.data = Buffer.alloc(strCapacity);
+    this.dataIdx = 0;
+    this.charIdx = 0;
     this.capacity = capacity;
     this.indices = new Uint32Array(capacity+1);
     this.indices[0] = 0;
@@ -88,13 +93,18 @@ class StrList {
   }
   push(x: string) {
     assert(this.idx < this.capacity);
-    this.data += x;
-    this.indices[this.idx+1] = this.data.length;
+    const bx = Buffer.from(x, 'ucs2');
+    assert(this.dataIdx + bx.byteLength < this.data.length);
+    this.data.set(bx, this.dataIdx);
+    this.dataIdx += bx.byteLength;
+
+    this.charIdx += x.length;
+    this.indices[this.idx+1] = this.charIdx;
     this.idx++;
   }
   toDataIndices() {
     return {
-      data: this.data,
+      data: this.data.toString('ucs2', 0, this.dataIdx),
       indices: this.indices.slice(0, this.idx+1)
     };
   }
@@ -155,13 +165,15 @@ export class LoudsBackend implements ITrieBackend<number> {
   // leaf index
   tails: bv.IStrVector;
   values: Uint32Array;
+  verbose: boolean = false;
 
-  constructor(V: new (data?: Buffer) => bv.IBitVector) {
+  constructor(V: new (data?: Buffer) => bv.IBitVector, verbose?: boolean) {
     this.BitVector = V;
     this.vector = new this.BitVector();
     this.terminals = new this.BitVector();
     this.values = new Uint32Array();
     this.tails = new this.StrVector();
+    if (verbose) this.verbose = verbose;
   }
 
   getRoot() {
@@ -235,54 +247,85 @@ export class LoudsBackend implements ITrieBackend<number> {
   }
 
   buildFromDataIndices(data: string, dataIndices: Uint32Array) {
+    const dataByteLength = Buffer.from(data, 'ucs2').byteLength;
     const indices = new Uint32Array(dataIndices.length - 1);
     indices.forEach((_, i, array) => {array[i] = i;});
     const dataLengths = new Uint32Array(dataIndices.length - 1);
-    dataLengths.forEach((_, i, array) => {array[i] = dataIndices[i+1] - dataIndices[i];});
+    dataLengths.forEach((_, i, array) => {
+      assert(dataIndices[i+1] > dataIndices[i]);
+      array[i] = dataIndices[i+1] - dataIndices[i];
+    });
 
     const rawVec = new BitList((1 + data.length) * 2);
     rawVec.push(true);
     rawVec.push(false);
     const rawTerm = new BitList((1 + data.length) * 2);
     const rawValue = new NumberList(indices.length);
-    const rawTails = new StrList(indices.length);
+    const rawTails = new StrList(indices.length, dataByteLength);
+    const edgeBuffer = Buffer.alloc(dataByteLength);
+    let edgeBufferIdx = 0;
 
-    indices.sort((a, b) => (
-      data.slice(dataIndices[a], dataIndices[a+1])
-      < data.slice(dataIndices[b], dataIndices[b+1])
-      ? -1 : 1)
-    );
-    
     this.edge = "";
     const queue = new NumberDoubleList(indices.length);
     const nextQueue = new NumberDoubleList(indices.length);
 
     const maxChars = dataLengths.reduce((x,e)=>Math.max(x,e));
+    if (this.verbose) console.log("maxChars:", maxChars);
+    
+    const bucket = new Uint32Array(65536);
+    const accumBucket = new Uint32Array(65536);
     queue.pushList(indices);
     for (let i = 0; i < maxChars; i++) {
+      if (this.verbose) console.log(`char ${i}`);
       nextQueue.clear();
+      let accum = 0;
+      let sublen = 0;
       for (let j = 0; j < queue.delimIdx; j++) {
-        let currNode = "";
-        for (let k = queue.delim[j]; k < queue.delim[j+1]; k++) {
-          const wordIdx = queue.data[k];
-          if (i < dataLengths[wordIdx]) {
-            const char = data[dataIndices[wordIdx]+i];
-            if (currNode !== char) {
-              // new sibling
-              currNode = char;
-              this.edge += char;
-              nextQueue.pushEmptyList();
+        bucket.fill(0);
+        const sub = queue.atList(j);
+        sublen = Math.max(sublen, sub.length);
+        if (sub.length === 1) {
+          const ord = data.charCodeAt(dataIndices[sub[0]] + i);
+          edgeBuffer[edgeBufferIdx++] = ord % 256;
+          edgeBuffer[edgeBufferIdx++] = ord >> 8;
+          rawVec.push(true);
+          nextQueue.delim[nextQueue.delimIdx++] = accum;
+          nextQueue.data[accum] = sub[0];
+          accum++;
+          nextQueue.idx++;
+        } else if (sub.length > 1) {
+          sub.forEach(w => {
+            const ord = data.charCodeAt(dataIndices[w] + i);
+            bucket[ord]++;
+          });
+          for (let b = 0; b < 65536; b++) {
+            if (bucket[b] > 0) {
+              edgeBuffer[edgeBufferIdx++] = b % 256;
+              edgeBuffer[edgeBufferIdx++] = b >> 8;
               rawVec.push(true);
+              nextQueue.delim[nextQueue.delimIdx++] = accum;
             }
-            nextQueue.push(wordIdx);
+            accumBucket[b] = accum;
+            accum += bucket[b];
           }
         }
         rawVec.push(false);
+        nextQueue.delim[nextQueue.delimIdx] = accum;
+
+        if (sub.length > 1) {
+          sub.forEach(w => {
+            const ord = data.charCodeAt(dataIndices[w] + i);
+            nextQueue.data[accumBucket[ord]++] = w;
+            nextQueue.idx++;
+          });
+        }
       }
+      if (this.verbose) console.log(queue.delimIdx, nextQueue.delimIdx, sublen);
       // terminal check
       queue.clear();
       for (let j = 0; j < nextQueue.delimIdx; j++) {
         const qlen = nextQueue.delim[j+1] - nextQueue.delim[j];
+        queue.pushEmptyList();
         if (qlen === 1) {
           // only one word in the path.
           rawTerm.push(true);
@@ -290,12 +333,11 @@ export class LoudsBackend implements ITrieBackend<number> {
           const suffix = data.slice(dataIndices[wordIdx]+i+1, dataIndices[wordIdx+1]);
           rawValue.push(wordIdx);
           rawTails.push(suffix);
-          queue.pushEmptyList();
         } else {
           let existTerm = false;
           for (let k = nextQueue.delim[j]; k < nextQueue.delim[j+1]; k++) {
             const wordIdx = nextQueue.data[k];
-            const wlen = dataIndices[wordIdx+1] - dataIndices[wordIdx];
+            const wlen = dataLengths[wordIdx];
             if (i === wlen-1) { // this is terminal
               if (!existTerm) {
                 existTerm = true;
@@ -303,19 +345,25 @@ export class LoudsBackend implements ITrieBackend<number> {
                 rawValue.push(wordIdx);
                 rawTails.push('');
               }
+            } else {
+              queue.push(wordIdx);
             }
           }
           if (!existTerm) rawTerm.push(false);
-          queue.pushList(nextQueue.atList(j));
         }
       }
+
+      if (this.verbose) console.log(`stored words: ${indices.length - queue.idx} / ${indices.length}`);
     }
+    if (this.verbose) console.log('everything is stored. compressing...');
     // compress
     this.vector = new this.BitVector(rawVec.toBuffer());
     this.terminals = new this.BitVector(rawTerm.toBuffer());
     this.values = rawValue.toArray();
     const {data: strData, indices: strIndices} = rawTails.toDataIndices();
     this.tails = bv.NaiveStrVector.fromDataIndices(strData, strIndices);
+    this.edge = edgeBuffer.toString('ucs2', 0, edgeBufferIdx);
+    if (this.verbose) console.log('done');
   }
 
   build(keys: string[]) {
