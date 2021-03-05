@@ -25,6 +25,29 @@ function testBitvector(V: BitVector, withDump: boolean) {
       expect(vec.rank1(10)).toBe(6);
       expect(vec.rank1(24)).toBe(11);
     });
+
+    it('rank0', () => {
+      const buf = Buffer.from([
+        0b01011101,
+        0b10001110,
+        0b00000110
+      ]);
+      let vec = new V(buf);
+      if (withDump) {
+        const buf = vec.dump();
+        vec = new V();
+        vec.load(buf, 0);
+      }
+      
+      expect(vec.rank0(0)).toBe(0);
+      expect(vec.rank0(1)).toBe(0);
+      expect(vec.rank0(2)).toBe(1);
+      expect(vec.rank0(3)).toBe(1);
+      expect(vec.rank0(8)).toBe(3);
+      expect(vec.rank0(9)).toBe(4);
+      expect(vec.rank0(10)).toBe(4);
+      expect(vec.rank0(24)).toBe(13);
+    });
   
     it('select1', () => {
       const buf = Buffer.from([

@@ -106,6 +106,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
     
       expect(trie.getWords("").length).toBe(7);
       expect(trie.getWords("h").length).toBe(0);
+      expect(trie.getWords("Sh").length).toBe(1);
       expect(trie.getWords("sea").length).toBe(2);
       expect(trie.getWords("sell").length).toBe(2);
       expect(trie.getWords("s").length).toBe(4);

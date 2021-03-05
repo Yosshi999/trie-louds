@@ -89,7 +89,7 @@ export class ReadonlyTrieTree {
     if (result.suffix.length > 0) {
       // cannot step anymore
       const term = this.tree.getTerminal(result.iter);
-      if (term !== null && term.tail === result.suffix) {
+      if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix) {
         return [prefix];
       } else {
         return [];
