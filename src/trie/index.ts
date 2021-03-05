@@ -32,16 +32,16 @@ class NumberList {
     assert(this.idx < this.capacity, "overflow");
     this.data[this.idx++] = x;
   }
-  at(i: number) {
-    assert(i < this.idx, "out of bound");
-    return this.data[i];
-  }
+  // at(i: number) {
+  //   assert(i < this.idx, "out of bound");
+  //   return this.data[i];
+  // }
   toArray() {
     return this.data.slice(0, this.idx);
   }
-  clear() {
-    this.idx = 0;
-  }
+  // clear() {
+  //   this.idx = 0;
+  // }
 }
 
 class BitList {
@@ -61,17 +61,17 @@ class BitList {
     }
     this.idx++;
   }
-  at(i: number) {
-    assert(i < this.idx);
-    return (this.data[i >> 3] >> (i % 8)) & 1;
-  }
+  // at(i: number) {
+  //   assert(i < this.idx);
+  //   return (this.data[i >> 3] >> (i % 8)) & 1;
+  // }
   toBuffer() {
     return this.data.slice(0, Math.ceil(this.idx / 8));
   }
-  clear() {
-    this.idx = 0;
-    this.data.fill(0);
-  }
+  // clear() {
+  //   this.idx = 0;
+  //   this.data.fill(0);
+  // }
 }
 
 class StrList {
