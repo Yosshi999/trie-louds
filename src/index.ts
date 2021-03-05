@@ -1,16 +1,31 @@
 import * as bv from './bitvector';
 import * as trie from './trie';
 import * as fs from 'fs';
+import { assert } from 'console';
 
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
   length: number = 0;
-  constructor(keys?: string[]) {
-    this.tree = new trie.LoudsBackend(bv.NaiveBitVector);
-    if (typeof keys !== "undefined") {
-      this.tree.build(keys);
-      this.length = keys.length;
-    }
+  constructor() {
+    this.tree = new trie.LoudsBackend(bv.SuccinctBitVector);
+  }
+  
+  static fromDataIndices(data: string, indices: Uint32Array, verbose?: boolean) {
+    const obj = new this();
+    /* istanbul ignore next */
+    if (verbose) obj.tree.verbose = true;
+    obj.tree.buildFromDataIndices(data, indices);
+    obj.length = indices.length - 1;
+    return obj;
+  }
+
+  static fromKeywordList(keys: string[], verbose?: boolean) {
+    const obj = new this();
+    /* istanbul ignore next */
+    if (verbose) obj.tree.verbose = true;
+    obj.tree.build(keys);
+    obj.length = keys.length;
+    return obj;
   }
 
   dumpFileSync(filename: string) {
@@ -76,7 +91,7 @@ export class ReadonlyTrieTree {
     if (result.suffix.length > 0) {
       // cannot step anymore
       const term = this.tree.getTerminal(result.iter);
-      if (term !== null && term.tail === result.suffix) {
+      if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix) {
         return [prefix];
       } else {
         return [];

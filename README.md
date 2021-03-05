@@ -12,7 +12,7 @@ $ npm install --save trie-louds
 ## Usage
 ```
 const {ReadonlyTrieTree} = require("trie-louds");
-const tree = new ReadonlyTrieTree(["She", "sells", "seashells", "by", "the", "seashore"]);
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
 
 console.log(tree.contains("She")); // true
 console.log(tree.contains("she")); // false
@@ -38,5 +38,4 @@ console.log(tree.getWords(""));
 ```
 
 ## TODO
-- Succinct Bit Vector
 - setup npm repo

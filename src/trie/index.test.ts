@@ -1,16 +1,23 @@
 import { assert } from 'console';
 import {LoudsBackend} from '.';
-import {NaiveBitVector} from '../bitvector';
+import {IBitVector,NaiveBitVector,SuccinctBitVector} from '../bitvector';
 
-function testLouds(withDump: boolean) {
+type BitVector = new (data?: Buffer) => IBitVector;
+function testLouds(V: BitVector, withDump: boolean, fromDataIndices: boolean) {
   return () => {
     it('build', () => {
       const keys = ["an", "i", "of", "one", "out", "our"];
-      let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      let trie = new LoudsBackend(V);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
-        trie = new LoudsBackend(NaiveBitVector);
+        trie = new LoudsBackend(V);
         trie.load(buf, 0);
       }
   
@@ -35,11 +42,17 @@ function testLouds(withDump: boolean) {
   
     it('build2', () => {
       const keys = ["an", "ans"];
-      let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      let trie = new LoudsBackend(V);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
-        trie = new LoudsBackend(NaiveBitVector);
+        trie = new LoudsBackend(V);
         trie.load(buf, 0);
       }
   
@@ -59,11 +72,17 @@ function testLouds(withDump: boolean) {
   
     it('build3', () => {
       const keys = ["an", "answer"];
-      let trie = new LoudsBackend(NaiveBitVector);
-      trie.build(keys);
+      let trie = new LoudsBackend(V);
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie.buildFromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie.build(keys);
+      }
       if (withDump) {
         const buf = trie.dump();
-        trie = new LoudsBackend(NaiveBitVector);
+        trie = new LoudsBackend(V);
         trie.load(buf, 0);
       }
   
@@ -81,6 +100,12 @@ function testLouds(withDump: boolean) {
     });
   };
 }
-describe('LOUDS', testLouds(false));
-describe('LOUDS with dump', testLouds(true));
+describe('LOUDS', testLouds(NaiveBitVector, false, false));
+describe('LOUDS from dataIndices', testLouds(NaiveBitVector, false, true));
+describe('LOUDS with dump', testLouds(NaiveBitVector, true, false));
+describe('LOUDS from dataIndices with dump', testLouds(NaiveBitVector, true, true));
 
+describe('Succinct LOUDS', testLouds(SuccinctBitVector, false, false));
+describe('Succinct LOUDS from dataIndices', testLouds(SuccinctBitVector, false, true));
+describe('Succinct LOUDS with dump', testLouds(SuccinctBitVector, true, false));
+describe('Succinct LOUDS from dataIndices with dump', testLouds(SuccinctBitVector, true, true));
