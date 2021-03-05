@@ -6,12 +6,8 @@ import { assert } from 'console';
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
   length: number = 0;
-  constructor(keys?: string[]) {
-    this.tree = new trie.LoudsBackend(bv.NaiveBitVector);
-    if (typeof keys !== "undefined") {
-      this.tree.build(keys);
-      this.length = keys.length;
-    }
+  constructor() {
+    this.tree = new trie.LoudsBackend(bv.SuccinctBitVector);
   }
   
   static fromDataIndices(data: string, indices: Uint32Array, verbose?: boolean) {

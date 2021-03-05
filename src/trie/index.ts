@@ -339,7 +339,7 @@ export class LoudsBackend implements ITrieBackend<number> {
 
       if (this.verbose) console.log(`stored words: ${indices.length - queue.idx} / ${indices.length}`);
     }
-    if (this.verbose) console.log('everything is stored. compressing...');
+    if (this.verbose) console.log('everything is stored. building vector...');
     // compress
     this.vector = new this.BitVector(rawVec.toBuffer());
     this.terminals = new this.BitVector(rawTerm.toBuffer());

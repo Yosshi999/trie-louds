@@ -15,7 +15,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
         trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
       } else {
-        trie = new ReadonlyTrieTree(keys);
+        trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
@@ -48,7 +48,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
         trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
       } else {
-        trie = new ReadonlyTrieTree(keys);
+        trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
@@ -70,7 +70,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
         trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
       } else {
-        trie = new ReadonlyTrieTree(keys);
+        trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");
@@ -93,7 +93,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
         trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
       } else {
-        trie = new ReadonlyTrieTree(keys);
+        trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
         trie.dumpFileSync("tmp.dat");

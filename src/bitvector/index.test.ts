@@ -1,6 +1,7 @@
 import * as bv from ".";
 
-function testNaiveBitvector(withDump: boolean) {
+type BitVector = new (data?: Buffer) => bv.IBitVector;
+function testBitvector(V: BitVector, withDump: boolean) {
   return () => {
     it('rank1', () => {
       const buf = Buffer.from([
@@ -8,10 +9,10 @@ function testNaiveBitvector(withDump: boolean) {
         0b10001110,
         0b00000110
       ]);
-      let vec = new bv.NaiveBitVector(buf);
+      let vec = new V(buf);
       if (withDump) {
         const buf = vec.dump();
-        vec = new bv.NaiveBitVector();
+        vec = new V();
         vec.load(buf, 0);
       }
       
@@ -31,10 +32,10 @@ function testNaiveBitvector(withDump: boolean) {
         0b10001110,
         0b00000110
       ]);
-      let vec = new bv.NaiveBitVector(buf);
+      let vec = new V(buf);
       if (withDump) {
         const buf = vec.dump();
-        vec = new bv.NaiveBitVector();
+        vec = new V();
         vec.load(buf, 0);
       }
       
@@ -49,10 +50,10 @@ function testNaiveBitvector(withDump: boolean) {
         0b10001110,
         0b00000110
       ]);
-      let vec = new bv.NaiveBitVector(buf);
+      let vec = new V(buf);
       if (withDump) {
         const buf = vec.dump();
-        vec = new bv.NaiveBitVector();
+        vec = new V();
         vec.load(buf, 0);
       }
       
@@ -60,11 +61,30 @@ function testNaiveBitvector(withDump: boolean) {
       expect(vec.select0(1)).toBe(2);
       expect(vec.select0(10)).toBe(21);
     });
+
+    it('access', () => {
+      const buf = Buffer.from([
+        0b01011101,
+      ]);
+      let vec = new V(buf);
+      if (withDump) {
+        const buf = vec.dump();
+        vec = new V();
+        vec.load(buf, 0);
+      }
+      
+      expect(vec.access(0)).toBe(true);
+      expect(vec.access(1)).toBe(false);
+      expect(vec.access(2)).toBe(true);
+      expect(vec.access(7)).toBe(false);
+    });
   };
 }
 
-describe('naive bitvector', testNaiveBitvector(false));
-describe('naive bitvector with dump', testNaiveBitvector(true));
+describe('naive bitvector', testBitvector(bv.NaiveBitVector, false));
+describe('naive bitvector with dump', testBitvector(bv.NaiveBitVector, true));
+describe('succinct bitvector', testBitvector(bv.SuccinctBitVector, false));
+describe('succinct bitvector with dump', testBitvector(bv.SuccinctBitVector, true));
 
 function testNaiveStrvector(withDump: boolean) {
   return () => {
