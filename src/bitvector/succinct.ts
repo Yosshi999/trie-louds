@@ -5,7 +5,7 @@ export class SuccinctBitVector implements IBitVector {
   length = 0;
   chunk: Uint32Array = new Uint32Array();
   block: Uint16Array = new Uint16Array();
-  private popcntTable: Uint16Array;
+  private popcntTable: Uint8Array;
 
   dump() {
     const lengthBuffer = Buffer.allocUnsafe(4);
@@ -53,12 +53,12 @@ export class SuccinctBitVector implements IBitVector {
   }
 
   constructor(_data?: Buffer) {
-    this.popcntTable = new Uint16Array(65536);
+    this.popcntTable = new Uint8Array(65536);
     for (let i = 0; i < this.popcntTable.length; i++) {
       let cnt = 0;
       let x = i;
       while (x > 0) {
-        if (x % 2 == 1) cnt++;
+        if (x % 2 === 1) cnt++;
         x >>= 1;
       }
       this.popcntTable[i] = cnt;
@@ -75,16 +75,16 @@ export class SuccinctBitVector implements IBitVector {
     let cr = 0;
     let br = 0;
     for (let i = 0; i < this.data.length; i++) { // 8-bit step
-      if (idx % 1024 == 0) {
+      if (idx % 1024 === 0) {
         this.chunk[idx / 1024] = cr;
         br = 0;
       }
-      if (idx % 16 == 0) {
+      if (idx % 16 === 0) {
         this.block[idx / 16] = br;
-        cr += br;
       }
       let byte = this.data[i];
       br += this.popcntTable[byte];
+      cr += this.popcntTable[byte];
       idx += 8;
     }
   }
