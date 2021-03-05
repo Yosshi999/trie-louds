@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import yargs from 'yargs';
 import { createReadStream, writeFileSync } from 'fs';
 import {ReadonlyTrieTree} from '.';
