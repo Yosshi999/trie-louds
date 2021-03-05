@@ -4,7 +4,7 @@ import {ReadonlyTrieTree} from '.';
 function testTrie(withDump: boolean, fromDataIndices: boolean) {
   return () => {
     it('build', () => {
-      const keys = readFileSync("./examples/oxford5000.txt").toString().trim().split("\n");
+      const keys = readFileSync("./examples/oxford5000.txt").toString().trim().split(/\r\n|\r|\n/);
       let trie: ReadonlyTrieTree;
       if (fromDataIndices) {
         const indices = [0];
