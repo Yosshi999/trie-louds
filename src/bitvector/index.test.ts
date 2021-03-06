@@ -1,4 +1,5 @@
 import * as bv from ".";
+import { SuccinctBitVector } from "./succinct";
 
 type BitVector = new (data?: Buffer) => bv.IBitVector;
 function testBitvector(V: BitVector, withDump: boolean) {
@@ -108,6 +109,15 @@ describe('naive bitvector', testBitvector(bv.NaiveBitVector, false));
 describe('naive bitvector with dump', testBitvector(bv.NaiveBitVector, true));
 describe('succinct bitvector', testBitvector(bv.SuccinctBitVector, false));
 describe('succinct bitvector with dump', testBitvector(bv.SuccinctBitVector, true));
+
+describe('succinct bitvector with chunk width data', () => {
+  it('rank1', () => {
+    const buf = Buffer.alloc(128, 0xff);
+    let vec = new SuccinctBitVector(buf);
+    expect(vec.rank1(1023)).toBe(1023);
+    expect(vec.rank1(1024)).toBe(1024);
+  });
+});
 
 function testNaiveStrvector(withDump: boolean) {
   return () => {

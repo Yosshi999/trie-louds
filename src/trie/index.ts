@@ -6,7 +6,7 @@ interface ITrieBackend<index_t> {
   BitVector: new (data: Buffer) => bv.IBitVector;
 
   getRoot(): index_t;
-  // getParent(idx: index_t): index_t;
+  getParent(idx: index_t): index_t;
   getFirstChild(idx: index_t): index_t|null;
   getNextSibling(idx: index_t): index_t|null;
   getEdge(idx: index_t): string;
@@ -182,9 +182,9 @@ export class LoudsBackend implements ITrieBackend<number> {
   getRoot() {
     return 0;
   }
-  // getParent(idx: number) {
-  //   return this.vector.select1(this.vector.rank0(idx));
-  // }
+  getParent(idx: number) {
+    return this.vector.select1(this.vector.rank0(idx))-1;
+  }
   getFirstChild(idx: number) {
     const r1 = this.vector.rank1(idx)+1;
     const child = this.vector.select0(r1);

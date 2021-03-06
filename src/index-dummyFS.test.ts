@@ -1,8 +1,3 @@
-const dummyFiles = new Map();
-jest.mock('fs', () => ({
-  readFileSync: (path: string) => dummyFiles.get(path),
-  writeFileSync: ((path: string, data: any) => {dummyFiles.set(path, data);})
-}));
 import {ReadonlyTrieTree} from '.';
 
 function testTrie(withDump: boolean, fromDataIndices: boolean) {
@@ -18,8 +13,8 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
-        trie.dumpFileSync("tmp.dat");
-        trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
+        const buffer = trie.dump();
+        trie = ReadonlyTrieTree.load(buffer);
       }
 
       expect(trie.length).toBe(6);
@@ -51,8 +46,8 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
-        trie.dumpFileSync("tmp.dat");
-        trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
+        const buffer = trie.dump();
+        trie = ReadonlyTrieTree.load(buffer);
       }
       expect(trie.length).toBe(2);
       
@@ -73,8 +68,8 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
-        trie.dumpFileSync("tmp.dat");
-        trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
+        const buffer = trie.dump();
+        trie = ReadonlyTrieTree.load(buffer);
       }
       expect(trie.length).toBe(2);
       
@@ -96,22 +91,24 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
         trie = ReadonlyTrieTree.fromKeywordList(keys);
       }
       if (withDump) {
-        trie.dumpFileSync("tmp.dat");
-        trie = ReadonlyTrieTree.loadFileSync("tmp.dat");
+        const buffer = trie.dump();
+        trie = ReadonlyTrieTree.load(buffer);
       }
       expect(trie.contains("sell")).toBe(true);
       expect(trie.contains("selll")).toBe(false);
       expect(trie.contains("seashores")).toBe(false);
       console.log(trie.getWords(""));
     
-      expect(trie.getWords("").length).toBe(7);
-      expect(trie.getWords("h").length).toBe(0);
-      expect(trie.getWords("Sh").length).toBe(1);
-      expect(trie.getWords("sea").length).toBe(2);
-      expect(trie.getWords("sell").length).toBe(2);
-      expect(trie.getWords("s").length).toBe(4);
-      expect(trie.getWords("seashore").length).toBe(1);
-      expect(trie.getWords("seashores").length).toBe(0);
+      expect(trie.getWords("").words.length).toBe(7);
+      expect(trie.getWords("h").words.length).toBe(0);
+      expect(trie.getWords("Sh").words.length).toBe(1);
+      expect(trie.getWords("sea").words.length).toBe(2);
+      expect(trie.getWords("sell").words.length).toBe(2);
+      expect(trie.getWords("s").words.length).toBe(4);
+      expect(trie.getWords("seashore").words.length).toBe(1);
+      expect(trie.getWords("seashores").words.length).toBe(0);
+
+      expect(trie.getMoreWords(trie.getWords("", 3).temporaryInfo!).words.length).toBe(4);
     });
   };
 }

@@ -3,6 +3,8 @@ import * as trie from './trie';
 import * as fs from 'fs';
 import { assert } from 'console';
 
+type TempInfo = {depth: number, iter: number, prefix: string};
+type SearchResult = {words: string[], hasMore: boolean, temporaryInfo?: TempInfo};
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
   length: number = 0;
@@ -28,18 +30,17 @@ export class ReadonlyTrieTree {
     return obj;
   }
 
-  dumpFileSync(filename: string) {
+  dump(): Buffer {
     const lengthBuffer = Buffer.allocUnsafe(4);
     lengthBuffer.writeUInt32LE(this.length);
     const buf = Buffer.concat([
       lengthBuffer,
       this.tree.dump()
     ]);
-    fs.writeFileSync(filename, buf);
+    return buf;
   }
 
-  static loadFileSync(filename: string) {
-    const buf = fs.readFileSync(filename);
+  static load(buf: Buffer) {
     const ret = new this();
     ret.length = buf.readUInt32LE(0);
     ret.tree.load(buf, 4);
@@ -67,10 +68,32 @@ export class ReadonlyTrieTree {
     return null;
   }
 
+  /*
+  * Aggregate at most `limit` words which are equal to / under the given node. 
+  * `limit` must be larger than zero.
+  */
+  private aggregate(iter: number, prefix: string, limit: number, depth: number, ret: SearchResult): void {
+    const term = this.tree.getTerminal(iter);
+    if (term !== null) {
+      // has word
+      if (limit <= ret.words.length) {
+        ret.hasMore = true;
+        ret.temporaryInfo = {depth, iter, prefix};
+        return;
+      }
+      ret.words.push(prefix + term.tail);
+    }
+    for (let _iter = this.tree.getFirstChild(iter); _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
+      this.aggregate(_iter, prefix+this.tree.getEdge(_iter), limit, depth+1, ret);
+      if (ret.hasMore) return;
+    }
+  }
+
   contains(word: string): boolean {
     const entry = this.getValue(word);
     return entry !== null;
   }
+
   getValue(word: string): number|null {
     const root = this.tree.getRoot();
     const result = this.dfs(word, root);
@@ -83,36 +106,66 @@ export class ReadonlyTrieTree {
     }
     return null;
   }
-  getWords(prefix: string): string[] {
+  
+  getWords(prefix: string, limit?: number): SearchResult {
+    if (!limit) limit = 1000;
     const root = this.tree.getRoot();
     const result = this.dfs(prefix, root);
-    if (result === null) return [];
+    if (result === null) return {words: [], hasMore: false};
 
     if (result.suffix.length > 0) {
       // cannot step anymore
       const term = this.tree.getTerminal(result.iter);
       if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix) {
-        return [prefix];
+        return {words: [prefix], hasMore: false};
       } else {
-        return [];
+        return {words: [], hasMore: false};
       }
     }
 
     // can step more
-    const func = (iter: number, prefix: string, words: string[]) => {
-      const term = this.tree.getTerminal(iter);
-      if (term !== null) {
-        // has word
-        words.push(prefix + term.tail);
-      }
-      for (let _iter = this.tree.getFirstChild(iter); _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
-        func(_iter, prefix+this.tree.getEdge(_iter), words);
-      }
+    const ret: SearchResult = {
+      words: [],
+      hasMore: false,
     };
-
-    const words: string[] = [];
-    func(result.iter, prefix, words);
-    return words;
+    this.aggregate(result.iter, prefix, limit, 0, ret);
+    return ret;
   }
 
+  getMoreWords(temporaryInfo: TempInfo, limit?: number): SearchResult {
+    if (!limit) limit = 1000;
+    const ret: SearchResult = {
+      words: [],
+      hasMore: false,
+    };
+
+    let {depth, iter, prefix} = temporaryInfo;
+    while(depth > 0) {
+      while (true) {
+        this.aggregate(iter, prefix, limit, depth, ret);
+        if (ret.hasMore) return ret;
+        const iterOpt = this.tree.getNextSibling(iter);
+        if (iterOpt === null) break;
+        iter = iterOpt;
+        prefix = prefix.slice(0, -1) + this.tree.getEdge(iter);
+      }
+      iter = this.tree.getParent(iter);
+      depth--;
+      prefix = prefix.slice(0, -1);
+
+      while (depth > 0) {
+        const iterOpt = this.tree.getNextSibling(iter);
+        if (iterOpt) {
+          iter = iterOpt;
+          prefix = prefix.slice(0, -1) + this.tree.getEdge(iter);
+          break;
+        } else {
+          iter = this.tree.getParent(iter);
+          depth--;
+          prefix = prefix.slice(0, -1);
+        }
+      }
+    }
+    return ret;
+  }
 }

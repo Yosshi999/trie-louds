@@ -1,3 +1,4 @@
+import assert from 'assert';
 import {IBitVector} from './base';
 
 export class SuccinctBitVector implements IBitVector {
@@ -87,6 +88,13 @@ export class SuccinctBitVector implements IBitVector {
       cr += this.popcntTable[byte];
       idx += 8;
     }
+    if (idx % 1024 === 0) {
+      this.chunk[idx / 1024] = cr;
+      br = 0;
+    }
+    if (idx % 16 === 0) {
+      this.block[idx / 16] = br;
+    }
   }
   access(index: number) {
     const subindex = index % 8;
@@ -97,7 +105,8 @@ export class SuccinctBitVector implements IBitVector {
     const c = Math.floor(index / 1024);
     const b = Math.floor(index / 16);
     const offset = index % 16;
-    let bitPtn = this.data[b*16/8];
+    let bitPtn = 0;
+    if (this.data[b*16/8]) bitPtn += this.data[b*16/8];
     if (this.data[b*16/8 + 1]) bitPtn += this.data[b*16/8 + 1] * 256;
     const bitPtnMasked = bitPtn & ((1 << offset) - 1);
     
@@ -108,7 +117,10 @@ export class SuccinctBitVector implements IBitVector {
   }
   select1(num: number) {
     if (num == 0) return 0;
-    if (this.rank1(this.length) < num) return -1;
+    assert(
+      this.rank1(this.length) >= num,
+      `num given to select1() is too large: ${this.rank1(this.length)} vs ${num}`
+    );
     let left = 0;
     let right: number = this.length;
     while (right - left > 1) {
@@ -124,7 +136,10 @@ export class SuccinctBitVector implements IBitVector {
   }
   select0(num: number) {
     if (num == 0) return 0;
-    if (this.rank0(this.length) < num) return -1;
+    assert(
+      this.rank0(this.length) >= num,
+      `num given to select0() is too large: ${this.rank0(this.length)} vs ${num}`
+    );
     let left = 0;
     let right: number = this.length;
     while (right - left > 1) {

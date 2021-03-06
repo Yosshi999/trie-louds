@@ -61,6 +61,5 @@ const argv = yargs
   console.log(`loaded ${entries} words.`);
   const tree = ReadonlyTrieTree.fromDataIndices(data, indices, true);
   console.log(`finish building Trie.`);
-  tree.dumpFileSync(argv.output);
+  writeFileSync(argv.output, tree.dump());
 })();
-

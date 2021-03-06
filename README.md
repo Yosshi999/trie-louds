@@ -12,17 +12,25 @@ $ npm install --save trie-louds
 ## Usage
 ```
 const {ReadonlyTrieTree} = require("trie-louds");
+const fs = require("fs");
 const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
 
 console.log(tree.contains("She")); // true
 console.log(tree.contains("she")); // false
-console.log(tree.getWords("sea")); // [ 'seashells', 'seashore' ] (search the words with given prefix)
+console.log(tree.getWords("sea").words); // [ 'seashells', 'seashore' ] (search the words with given prefix)
 console.log(tree.getValue("seashells")); // 2 (index of keywords)
 console.log(tree.getValue("sell")); // null (not found)
 
-tree.dumpFileSync("tree.dat"); // You can dump the tree data.
-const loadedTree = ReadonlyTrieTree.loadFileSync("tree.dat");
-console.log(loadedTree.getWords("sea")); // [ 'seashells', 'seashore' ]
+console.log(tree.getWords("").words); // [ 'She', 'by', 'seashells', 'seashore', 'sells', 'the' ] (searched words are sorted)
+const limited = tree.getWords("", 3);
+console.log(limited.words); // [ 'She', 'by', 'seashells' ] (you can limit the number of searched words (default is 1000))
+console.log(limited.hasMore); // true (if there are unsearched words due to limit, hasMore will be true)
+// (and you can continue searching by calling getMoreWords with temporaryInfo)
+console.log(tree.getMoreWords(limited.temporaryInfo).words); // [ 'seashore', 'sells', 'the' ]
+
+fs.writeFileSync("tree.dat", tree.dump()); // You can dump the tree data.
+const loadedTree = ReadonlyTrieTree.load(fs.readFileSync("tree.dat"));
+console.log(loadedTree.getWords("sea").words); // [ 'seashells', 'seashore' ]
 ```
 
 ## Command
