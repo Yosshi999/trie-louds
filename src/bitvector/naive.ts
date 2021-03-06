@@ -105,15 +105,14 @@ export class NaiveBitVector implements IBitVector {
 
 export class NaiveStrVector implements IStrVector {
   length: number = 0;
-  data: string = "";
+  data: Buffer = Buffer.alloc(0);
   indices: Uint32Array = new Uint32Array();
 
   dump() {
     const lengthBuffer = Buffer.allocUnsafe(4);
     lengthBuffer.writeUInt32LE(this.length);
-    const dataBuffer = Buffer.from(this.data);
     const dataLengthBuffer = Buffer.allocUnsafe(4);
-    dataLengthBuffer.writeUInt32LE(dataBuffer.length);
+    dataLengthBuffer.writeUInt32LE(this.data.length);
     const indicesBuffer = Buffer.allocUnsafe(4 * this.indices.length);
     this.indices.forEach((v, i) => {
       indicesBuffer.writeUInt32LE(v, i*4);
@@ -122,7 +121,7 @@ export class NaiveStrVector implements IStrVector {
     indicesLengthBuffer.writeUInt32LE(indicesBuffer.length);
     return Buffer.concat([
       lengthBuffer,
-      dataLengthBuffer, dataBuffer,
+      dataLengthBuffer, this.data,
       indicesLengthBuffer, indicesBuffer
     ]);
   }
@@ -130,7 +129,7 @@ export class NaiveStrVector implements IStrVector {
   load(buf: Buffer, offset: number) {
     this.length = buf.readUInt32LE(offset); offset += 4;
     const dataLength = buf.readUInt32LE(offset); offset += 4;
-    this.data = buf.slice(offset, offset+dataLength).toString(); offset += dataLength;
+    this.data = buf.slice(offset, offset+dataLength); offset += dataLength;
     const indicesLength = buf.readUInt32LE(offset); offset += 4;
     this.indices = new Uint32Array(indicesLength / 4);
     for (let i = 0; i < indicesLength / 4; i += 1) {
@@ -142,7 +141,7 @@ export class NaiveStrVector implements IStrVector {
 
   constructor(keys?: string[]) {
     if (typeof keys === "undefined") return;
-    this.data = keys.join("");
+    this.data = Buffer.from(keys.join(""), 'ucs2');
     this.length = keys.length;
     this.indices = new Uint32Array(this.length+1);
     let n = 0;
@@ -153,9 +152,9 @@ export class NaiveStrVector implements IStrVector {
     this.indices[keys.length] = n;
   }
 
-  static fromDataIndices(data: string, indices: Uint32Array) {
+  static fromBufferIndices(buf: Buffer, indices: Uint32Array) {
     const obj = new this();
-    obj.data = data;
+    obj.data = buf;
     obj.indices = indices;
     obj.length = indices.length - 1;
     return obj;
@@ -164,6 +163,6 @@ export class NaiveStrVector implements IStrVector {
   at(index: number) {
     const begin = this.indices[index];
     const end = this.indices[index+1];
-    return this.data.slice(begin, end);
+    return this.data.slice(begin*2, end*2).toString('ucs2');
   }
 }

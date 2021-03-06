@@ -21,8 +21,8 @@ function testLouds(V: BitVector, withDump: boolean, fromDataIndices: boolean) {
         trie.load(buf, 0);
       }
   
-      expect(trie.edge).toBe("aiofnurt");
-      expect(trie.tails.data).toBe("ne");
+      expect(trie.edge.toString('ucs2')).toBe("aiofnurt");
+      expect(trie.tails.data.toString('ucs2')).toBe("ne");
       expect(trie.vector.data.toString('hex')).toBe(Buffer.from([
         0b00011101,
         0b11000111,

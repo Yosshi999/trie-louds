@@ -12,6 +12,8 @@ interface ITrieBackend<index_t> {
   getEdge(idx: index_t): string;
   build(keys: string[]): void;
   buildFromDataIndices(data: string, indices: Uint32Array): void;
+  /* TODO: use buffer instead of string to reduce memory usage */
+  // buildFromBufferIndices(buf: Buffer, indices: Uint32Array): void;
   getTerminal(idx: index_t): {value: number, tail: string} | null;
 
   dump(): Buffer;
@@ -102,9 +104,15 @@ class StrList {
     this.indices[this.idx+1] = this.charIdx;
     this.idx++;
   }
-  toDataIndices() {
+  // toDataIndices() {
+  //   return {
+  //     data: this.data.toString('ucs2', 0, this.dataIdx),
+  //     indices: this.indices.slice(0, this.idx+1)
+  //   };
+  // }
+  toBufferIndices() {
     return {
-      data: this.data.toString('ucs2', 0, this.dataIdx),
+      buf: this.data.slice(0, this.dataIdx),
       indices: this.indices.slice(0, this.idx+1)
     };
   }
@@ -163,7 +171,7 @@ export class LoudsBackend implements ITrieBackend<number> {
   // index
   vector: bv.IBitVector;
   // label index
-  edge: string = '';
+  edge: Buffer = Buffer.alloc(0);
   terminals: bv.IBitVector;
   // leaf index
   tails: bv.IStrVector;
@@ -200,9 +208,9 @@ export class LoudsBackend implements ITrieBackend<number> {
       return null;
     }
   }
-  getEdge(idx: number) {
+  getEdge(idx: number): string {
     const labelIdx = this.vector.rank1(idx) - 1;
-    return this.edge[labelIdx];
+    return String.fromCharCode(this.edge.readUInt16LE(labelIdx*2));
   }
 
   getTerminal(idx: number) {
@@ -216,9 +224,8 @@ export class LoudsBackend implements ITrieBackend<number> {
   }
 
   dump() {
-    const edgeBuffer = Buffer.from(this.edge);
     const edgeLengthBuffer = Buffer.allocUnsafe(4);
-    edgeLengthBuffer.writeUInt32LE(edgeBuffer.length);
+    edgeLengthBuffer.writeUInt32LE(this.edge.length);
     const valuesBuffer = Buffer.allocUnsafe(4 * this.values.length);
     this.values.forEach((v, i) => {
       valuesBuffer.writeUInt32LE(v, i*4);
@@ -228,7 +235,7 @@ export class LoudsBackend implements ITrieBackend<number> {
 
     return Buffer.concat([
       this.vector.dump(),
-      edgeLengthBuffer, edgeBuffer,
+      edgeLengthBuffer, this.edge,
       this.terminals.dump(),
       this.tails.dump(),
       valuesLengthBuffer, valuesBuffer
@@ -237,7 +244,7 @@ export class LoudsBackend implements ITrieBackend<number> {
   load(buf: Buffer, offset: number) {
     offset = this.vector.load(buf, offset);
     const edgeLength = buf.readUInt32LE(offset); offset += 4;
-    this.edge = buf.slice(offset, offset + edgeLength).toString(); offset += edgeLength;
+    this.edge = buf.slice(offset, offset + edgeLength); offset += edgeLength;
     offset = this.terminals.load(buf, offset);
     offset = this.tails.load(buf, offset);
     const valuesLength = buf.readUInt32LE(offset); offset += 4;
@@ -268,7 +275,6 @@ export class LoudsBackend implements ITrieBackend<number> {
     const edgeBuffer = Buffer.alloc(dataByteLength);
     let edgeBufferIdx = 0;
 
-    this.edge = "";
     const queue = new NumberDoubleList(indices.length);
     const nextQueue = new NumberDoubleList(indices.length);
 
@@ -344,9 +350,9 @@ export class LoudsBackend implements ITrieBackend<number> {
     this.vector = new this.BitVector(rawVec.toBuffer());
     this.terminals = new this.BitVector(rawTerm.toBuffer());
     this.values = rawValue.toArray();
-    const {data: strData, indices: strIndices} = rawTails.toDataIndices();
-    this.tails = bv.NaiveStrVector.fromDataIndices(strData, strIndices);
-    this.edge = edgeBuffer.toString('ucs2', 0, edgeBufferIdx);
+    const {buf: strBuf, indices: strIndices} = rawTails.toBufferIndices();
+    this.tails = bv.NaiveStrVector.fromBufferIndices(strBuf, strIndices);
+    this.edge = edgeBuffer.slice(0, edgeBufferIdx);
     if (this.verbose) console.log('done');
   }
 
@@ -359,7 +365,7 @@ export class LoudsBackend implements ITrieBackend<number> {
     const rawTails: string[] = [];
     const kv = keys.map((value, idx) => ({value, idx}));
     kv.sort((a, b) => (a.value < b.value ? -1 : 1));
-    this.edge = '';
+    let edge = '';
     let queue: {value: string, idx: number}[][] = [kv];
     for (let i = 0; i < maxChars; i++) {
       let nextQueue: {value: string, idx: number}[][] = [];
@@ -372,7 +378,7 @@ export class LoudsBackend implements ITrieBackend<number> {
             if (currNode !== char) {
               // new sibling
               currNode = char;
-              this.edge += char;
+              edge += char;
               nextQueue.push([]);
               rawVec.push(true);
             }
@@ -424,5 +430,6 @@ export class LoudsBackend implements ITrieBackend<number> {
     this.terminals = new this.BitVector(term);
     this.values = new Uint32Array(rawValue);
     this.tails = new this.StrVector(rawTails);
+    this.edge = Buffer.from(edge, 'ucs2');
   }
 }

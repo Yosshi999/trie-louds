@@ -44,6 +44,42 @@ const {ReadonlyTrieTree} = require("trie-louds");
 const tree = ReadonlyTrieTree.loadFileSync("examples/trie.dat");
 console.log(tree.getWords(""));
 ```
+### enwiki trie tree
+You can create the trie tree of wikipedia-en keywords.
+```
+> cat enwiki-20210220-pages-articles-multistream-index.txt | sed -e 's/.*://g' > enwiki-keywords.txt
+> trie-dump --input ..\loudstest\enwiki-keywords.txt --output enwiki.dat
+```
+In this case, we can store 20993072 words in this trie tree and dump it.
+The size of `enwiki-keywords.txt` is about 495MiB and the size of `enwiki.dat` is about 565MiB.
+
+```
+const {ReadonlyTrieTree} = require("trie-louds");
+const {readFileSync} = require("fs");
+const tree = ReadonlyTrieTree.load(readFileSync("./enwiki.dat"));
+console.log(process.memoryUsage());
+console.log(tree.getWords("Undertale"));
+
+--- output ---
+{ rss: 784404480,
+  heapTotal: 10731520,
+  heapUsed: 5436512,
+  external: 761201137 }
+
+{ words:
+   [ 'Undertale',
+     'Undertale (game)',
+     'Undertale (video game)',
+     'Undertale - Hopes and Dreams.ogg',
+     'Undertale 2',
+     'Undertale Combat Example.png',
+     'Undertale Kickstarter Promotional Art.png',
+     'Undertale character redirects to lists',
+     'Undertale fandom',
+     'Undertale soundtrack' ],
+  hasMore: false }
+```
+And it takes about 750MiB when you load this trie tree on memory.
 
 ## TODO
 - setup npm repo

@@ -25,7 +25,7 @@ export interface IStrVector {
   at(index: number): string;
 
   length: number;
-  data: string;
+  data: Buffer;
 
   dump(): Buffer;
   load(buf: Buffer, offset: number): number;
