@@ -1,4 +1,5 @@
 # Trie-LOUDS
+[![npm package](https://badge.fury.io/js/trie-louds.svg)](https://npmjs.org/package/trie-louds)
 [![Node.js CI](https://github.com/Yosshi999/trie-louds/actions/workflows/node.js.yml/badge.svg)](https://github.com/Yosshi999/trie-louds/actions/workflows/node.js.yml)
 [![codecov](https://codecov.io/gh/Yosshi999/trie-louds/branch/master/graph/badge.svg?token=Y0XIT9GJS8)](https://codecov.io/gh/Yosshi999/trie-louds)
 
@@ -80,6 +81,3 @@ console.log(tree.getWords("Undertale"));
   hasMore: false }
 ```
 And it takes about 750MiB when you load this trie tree on memory.
-
-## TODO
-- setup npm repo
