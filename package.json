@@ -14,6 +14,16 @@
     },
     "author": "Yosshi999",
     "license": "MIT",
+    "keywords": [
+        "trie",
+        "search",
+        "prefix",
+        "LOUDS",
+        "dictionary",
+        "map"
+    ],
+    "homepage": "https://github.com/Yosshi999/trie-louds",
+    "repository": "Yosshi999/trie-louds",
     "devDependencies": {
         "@types/jest": "^25.2.3",
         "@types/node": "^14.0.5",
