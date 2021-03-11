@@ -1,24 +1,36 @@
-/* istanbul ignore file */
 import yargs from 'yargs';
 import { createReadStream, writeFileSync } from 'fs';
 import {ReadonlyTrieTree} from '.';
 import { createInterface } from 'readline';
 
-const argv = yargs
-  .option('input', {
-    description: 'keywords file (one keyword per line)',
-    demandOption: true,
-    type: 'string'
-  })
-  .option('output', {
-    description: 'output file',
-    demandOption: true,
-    type: 'string'
-  })
-  .help()
-  .argv;
+export const main = async () => {
+  let argv: any;
+  try {
+    argv = yargs(process.argv.slice(2))
+      .option('input', {
+        description: 'keywords file (one keyword per line)',
+        demandOption: true,
+        type: 'string'
+      })
+      .option('output', {
+        description: 'output file',
+        demandOption: true,
+        type: 'string'
+      })
+      .help()
+      .exitProcess(false)
+      .fail((msg, err, yargs) => {
+        if (err) throw err;
+        console.error(msg);
+        console.error(yargs.help());
+        throw null;
+      })
+      .argv;
+  } catch (err) {
+    if (err) console.error(err);
+    return 0;
+  }
 
-(async () => {
   let byteLength = 0;
   let entries = 0;
 
@@ -62,4 +74,4 @@ const argv = yargs
   const tree = ReadonlyTrieTree.fromDataIndices(data, indices, true);
   console.log(`finish building Trie.`);
   writeFileSync(argv.output, tree.dump());
-})();
+};

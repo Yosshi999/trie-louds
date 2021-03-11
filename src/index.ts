@@ -14,7 +14,6 @@ export class ReadonlyTrieTree {
   
   static fromDataIndices(data: string, indices: Uint32Array, verbose?: boolean) {
     const obj = new this();
-    /* istanbul ignore next */
     if (verbose) obj.tree.verbose = true;
     obj.tree.buildFromDataIndices(data, indices);
     obj.length = indices.length - 1;
@@ -23,7 +22,6 @@ export class ReadonlyTrieTree {
 
   static fromKeywordList(keys: string[], verbose?: boolean) {
     const obj = new this();
-    /* istanbul ignore next */
     if (verbose) obj.tree.verbose = true;
     obj.tree.build(keys);
     obj.length = keys.length;

@@ -1,2 +1,3 @@
 #!/usr/bin/env node
-require('../dist/dump_trie.js');
+const {main} = require('../dist/dump_trie.js');
+main();
