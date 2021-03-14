@@ -98,9 +98,10 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
       expect(trie.contains("sell")).toBe(true);
       expect(trie.contains("selll")).toBe(false);
       expect(trie.contains("seashores")).toBe(false);
-      console.log(trie.getWords(""));
     
       expect(trie.getWords("").words.length).toBe(7);
+      expect(trie.getWords("").values.length).toBe(7);
+
       expect(trie.getWords("h").words.length).toBe(0);
       expect(trie.getWords("Sh").words.length).toBe(1);
       expect(trie.getWords("sea").words.length).toBe(2);
@@ -142,18 +143,23 @@ function testLargeTrie(withDump: boolean, fromDataIndices: boolean) {
       const result21 = trie.getWords("");
       expect(result21.words.length).toBe(1000);
       expect(result21.words[0]).toBe(sortedUniqueKeys[0]);
+      expect(result21.values[0]).toBe(keys.indexOf(sortedUniqueKeys[0]));
       expect(result21.words[999]).toBe(sortedUniqueKeys[999]);
+      expect(result21.values[999]).toBe(keys.indexOf(sortedUniqueKeys[999]));
       expect(result21.hasMore).toBe(true);
       console.log(result21.words[999], result21.temporaryInfo);
       const result22 = trie.getMoreWords(result21.temporaryInfo!);
       expect(result22.words.length).toBe(1000);
       expect(result22.words[0]).toBe(sortedUniqueKeys[1000]);
+      expect(result22.values[0]).toBe(keys.indexOf(sortedUniqueKeys[1000]));
       expect(result22.words[999]).toBe(sortedUniqueKeys[1999]);
+      expect(result22.values[999]).toBe(keys.indexOf(sortedUniqueKeys[1999]));
       expect(result22.hasMore).toBe(true);
 
       const result31 = trie.getWords("cr", 30);
       expect(result31.words.length).toBe(30);
       expect(result31.words[0]).toBe("crack");
+      expect(result31.values[0]).toBe(3443);
       expect(result31.hasMore).toBe(true);
       const result32 = trie.getMoreWords(result31.temporaryInfo!, 1);
       expect(result32.words.length).toBe(1);

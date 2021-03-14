@@ -62,10 +62,10 @@ console.log(process.memoryUsage());
 console.log(tree.getWords("Undertale"));
 
 --- output ---
-{ rss: 784404480,
-  heapTotal: 10731520,
-  heapUsed: 5436512,
-  external: 761201137 }
+{ rss: 785285120,
+  heapTotal: 10207232,
+  heapUsed: 5383232,
+  external: 761201155 }
 
 { words:
    [ 'Undertale',
@@ -78,6 +78,17 @@ console.log(tree.getWords("Undertale"));
      'Undertale character redirects to lists',
      'Undertale fandom',
      'Undertale soundtrack' ],
+  values:
+   [ 19574893,
+     15834775,
+     16217668,
+     15772089,
+     18495783,
+     15198496,
+     19989624,
+     17975151,
+     20721313,
+     18488239 ],
   hasMore: false }
 ```
 And it takes about 750MiB when you load this trie tree on memory.

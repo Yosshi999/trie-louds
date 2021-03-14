@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { assert } from 'console';
 
 type TempInfo = {depth: number, iter: number, prefix: string};
-type SearchResult = {words: string[], hasMore: boolean, temporaryInfo?: TempInfo};
+type SearchResult = {words: string[], values: number[], hasMore: boolean, temporaryInfo?: TempInfo};
 export class ReadonlyTrieTree {
   tree: trie.LoudsBackend;
   length: number = 0;
@@ -80,6 +80,7 @@ export class ReadonlyTrieTree {
         return;
       }
       ret.words.push(prefix + term.tail);
+      ret.values.push(term.value);
     }
     for (let _iter = this.tree.getFirstChild(iter); _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
       this.aggregate(_iter, prefix+this.tree.getEdge(_iter), limit, depth+1, ret);
@@ -109,21 +110,22 @@ export class ReadonlyTrieTree {
     if (!limit) limit = 1000;
     const root = this.tree.getRoot();
     const result = this.dfs(prefix, root);
-    if (result === null) return {words: [], hasMore: false};
+    if (result === null) return {words: [], values: [], hasMore: false};
 
     if (result.suffix.length > 0) {
       // cannot step anymore
       const term = this.tree.getTerminal(result.iter);
       if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix) {
-        return {words: [prefix], hasMore: false};
+        return {words: [prefix], values: [term.value], hasMore: false};
       } else {
-        return {words: [], hasMore: false};
+        return {words: [], values: [], hasMore: false};
       }
     }
 
     // can step more
     const ret: SearchResult = {
       words: [],
+      values: [],
       hasMore: false,
     };
     this.aggregate(result.iter, prefix, limit, 0, ret);
@@ -134,6 +136,7 @@ export class ReadonlyTrieTree {
     if (!limit) limit = 1000;
     const ret: SearchResult = {
       words: [],
+      values: [],
       hasMore: false,
     };
 
