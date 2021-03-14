@@ -1,5 +1,4 @@
 import assert from 'assert';
-import { BigIntStats } from 'fs';
 import * as bv from '../bitvector';
 
 interface ITrieBackend<index_t> {
@@ -43,36 +42,6 @@ class NumberList {
   }
   // clear() {
   //   this.idx = 0;
-  // }
-}
-
-class BitList {
-  data: Buffer;
-  capacity: number;
-  idx: number;
-
-  constructor(capacity: number) {
-    this.data = Buffer.alloc(Math.ceil(capacity / 8));
-    this.capacity = capacity;
-    this.idx = 0;
-  }
-  push(x: boolean) {
-    assert(this.idx < this.capacity);
-    if (x) {
-      this.data[this.idx >> 3] |= 1 << (this.idx % 8);
-    }
-    this.idx++;
-  }
-  // at(i: number) {
-  //   assert(i < this.idx);
-  //   return (this.data[i >> 3] >> (i % 8)) & 1;
-  // }
-  toBuffer() {
-    return this.data.slice(0, Math.ceil(this.idx / 8));
-  }
-  // clear() {
-  //   this.idx = 0;
-  //   this.data.fill(0);
   // }
 }
 
@@ -166,7 +135,7 @@ class NumberDoubleList {
 
 export class LoudsBackend implements ITrieBackend<number> {
   BitVector: new (data?: Buffer) => bv.IBitVector;
-  StrVector: new (data?: string[]) => bv.IStrVector = bv.NaiveStrVector;
+  StrVector: new (data?: string[]) => bv.IStrVector = bv.SuccinctStrVector;
 
   // index
   vector: bv.IBitVector;
@@ -266,10 +235,10 @@ export class LoudsBackend implements ITrieBackend<number> {
       array[i] = dataIndices[i+1] - dataIndices[i];
     });
 
-    const rawVec = new BitList((1 + data.length) * 2);
+    const rawVec = new bv.BitList((1 + data.length) * 2);
     rawVec.push(true);
     rawVec.push(false);
-    const rawTerm = new BitList((1 + data.length) * 2);
+    const rawTerm = new bv.BitList((1 + data.length) * 2);
     const rawValue = new NumberList(indices.length);
     const rawTails = new StrList(indices.length, dataByteLength);
     const edgeBuffer = Buffer.alloc(dataByteLength);
@@ -351,7 +320,7 @@ export class LoudsBackend implements ITrieBackend<number> {
     this.terminals = new this.BitVector(rawTerm.toBuffer());
     this.values = rawValue.toArray();
     const {buf: strBuf, indices: strIndices} = rawTails.toBufferIndices();
-    this.tails = bv.NaiveStrVector.fromBufferIndices(strBuf, strIndices);
+    this.tails = bv.SuccinctStrVector.fromBufferIndices(strBuf, strIndices);
     this.edge = edgeBuffer.slice(0, edgeBufferIdx);
     if (this.verbose) console.log('done');
   }

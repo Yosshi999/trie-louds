@@ -119,14 +119,34 @@ describe('succinct bitvector with chunk width data', () => {
   });
 });
 
-function testNaiveStrvector(withDump: boolean) {
+type StrVector = 
+  (new (keys?: string[]) => bv.IStrVector)
+  & {fromBufferIndices: (buf: Buffer, indices: Uint32Array) => bv.IStrVector};
+function testStrvector(V: StrVector, withDump: boolean) {
   return () => {
     it('at', () => {
       const keys = "ai ao aj sea seashore".split(" ");
-      let vec = new bv.NaiveStrVector(keys);
+      let vec = new V(keys);
       if (withDump) {
         const buf = vec.dump();
-        vec = new bv.NaiveStrVector();
+        vec = new V();
+        vec.load(buf, 0);
+      }
+  
+      expect(vec.length).toBe(5);
+      expect(vec.at(0)).toBe("ai");
+      expect(vec.at(3)).toBe("sea");
+      expect(vec.at(4)).toBe("seashore");
+    });
+
+    it('fromBufferIndices at', () => {
+      const keys = "ai ao aj sea seashore".split(" ");
+      const indices = [0];
+      keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+      let vec = V.fromBufferIndices(Buffer.from(keys.join(''), 'ucs2'), new Uint32Array(indices));
+      if (withDump) {
+        const buf = vec.dump();
+        vec = new V();
         vec.load(buf, 0);
       }
   
@@ -138,5 +158,7 @@ function testNaiveStrvector(withDump: boolean) {
   };
 }
 
-describe('naive strvector', testNaiveStrvector(false));
-describe('naive strvector with dump', testNaiveStrvector(true));
+describe('naive strvector', testStrvector(bv.NaiveStrVector, false));
+describe('naive strvector with dump', testStrvector(bv.NaiveStrVector, true));
+describe('succinct strvector', testStrvector(bv.SuccinctStrVector, false));
+describe('succinct strvector with dump', testStrvector(bv.SuccinctStrVector, true));

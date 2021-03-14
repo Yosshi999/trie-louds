@@ -1,5 +1,35 @@
 import assert from 'assert';
-import {IBitVector} from './base';
+import {IBitVector, IStrVector} from './base';
+
+export class BitList {
+  data: Buffer;
+  capacity: number;
+  idx: number;
+
+  constructor(capacity: number) {
+    this.data = Buffer.alloc(Math.ceil(capacity / 8));
+    this.capacity = capacity;
+    this.idx = 0;
+  }
+  push(x: boolean) {
+    assert(this.idx < this.capacity);
+    if (x) {
+      this.data[this.idx >> 3] |= 1 << (this.idx % 8);
+    }
+    this.idx++;
+  }
+  // at(i: number) {
+  //   assert(i < this.idx);
+  //   return (this.data[i >> 3] >> (i % 8)) & 1;
+  // }
+  toBuffer() {
+    return this.data.slice(0, Math.ceil(this.idx / 8));
+  }
+  // clear() {
+  //   this.idx = 0;
+  //   this.data.fill(0);
+  // }
+}
 
 export class SuccinctBitVector implements IBitVector {
   data: Buffer = Buffer.alloc(0);
@@ -152,5 +182,86 @@ export class SuccinctBitVector implements IBitVector {
       }
     }
     return right;
+  }
+}
+
+export class SuccinctStrVector implements IStrVector {
+  length: number = 0;
+  data: Buffer = Buffer.alloc(0);
+  /* isEmpty[i] <=> vector[i] == "" */
+  isEmpty: SuccinctBitVector = new SuccinctBitVector();
+  /* vector[i] == data[delim.select1(isEmpty.rank0(i))*2 : delim.select1(isEmpty.rank0(i)+1)*2] */
+  delim: SuccinctBitVector = new SuccinctBitVector();
+
+  constructor(keys?: string[]) {
+    if (typeof keys === "undefined") return;
+    this.data = Buffer.from(keys.join(""), 'ucs2');
+    this.length = keys.length;
+    const isEmpty = new BitList(this.length);
+    const delim = new BitList(this.data.length >> 1);
+    let n = 0;
+    keys.forEach((v, idx) => {
+      n += v.length;
+      if (v.length > 0) {
+        isEmpty.push(false);
+        for (let i = 0; i < v.length-1; i++) delim.push(false);
+        delim.push(true);
+      } else {
+        isEmpty.push(true);
+      }
+    });
+    this.isEmpty = new SuccinctBitVector(isEmpty.toBuffer());
+    this.delim = new SuccinctBitVector(delim.toBuffer());
+  }
+
+  dump() {
+    const lengthBuffer = Buffer.allocUnsafe(4);
+    lengthBuffer.writeUInt32LE(this.length);
+    const dataLengthBuffer = Buffer.allocUnsafe(4);
+    dataLengthBuffer.writeUInt32LE(this.data.length);
+    return Buffer.concat([
+      lengthBuffer,
+      dataLengthBuffer, this.data,
+      this.isEmpty.dump(),
+      this.delim.dump()
+    ]);
+  }
+
+  load(buf: Buffer, offset: number): number {
+    this.length = buf.readUInt32LE(offset); offset += 4;
+    const dataLength = buf.readUInt32LE(offset); offset += 4;
+    this.data = buf.slice(offset, offset+dataLength); offset += dataLength;
+    offset = this.isEmpty.load(buf, offset);
+    offset = this.delim.load(buf, offset);
+    return offset;
+  }
+
+  static fromBufferIndices(buf: Buffer, indices: Uint32Array) {
+    const obj = new this();
+    obj.data = buf;
+    obj.length = indices.length - 1;
+
+    const isEmpty = new BitList(obj.length);
+    const delim = new BitList(obj.data.length >> 1);
+    for (let i = 0; i < indices.length-1; i++) {
+      if (indices[i] < indices[i+1]) {
+        isEmpty.push(false);
+        for (let j = indices[i]; j < indices[i+1]-1; j++) delim.push(false);
+        delim.push(true);
+      } else {
+        isEmpty.push(true);
+      }
+    }
+    obj.isEmpty = new SuccinctBitVector(isEmpty.toBuffer());
+    obj.delim = new SuccinctBitVector(delim.toBuffer());
+    return obj;
+  }
+
+  at(index: number) {
+    if (this.isEmpty.access(index)) return '';
+    const delimIdx = this.isEmpty.rank0(index);
+    const begin = this.delim.select1(delimIdx);
+    const end = this.delim.select1(delimIdx+1);
+    return this.data.slice(begin*2, end*2).toString('ucs2');
   }
 }

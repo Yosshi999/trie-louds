@@ -52,7 +52,7 @@ You can create the trie tree of wikipedia-en keywords.
 > trie-dump --input ..\loudstest\enwiki-keywords.txt --output enwiki.dat
 ```
 In this case, we can store 20993072 words in this trie tree and dump it.
-The size of `enwiki-keywords.txt` is about 495MiB and the size of `enwiki.dat` is about 565MiB.
+The size of `enwiki-keywords.txt` is about 495MiB and the size of `enwiki.dat` is about 512MiB.
 
 ```
 const {ReadonlyTrieTree} = require("trie-louds");
@@ -62,10 +62,10 @@ console.log(process.memoryUsage());
 console.log(tree.getWords("Undertale"));
 
 --- output ---
-{ rss: 785285120,
-  heapTotal: 10207232,
-  heapUsed: 5383232,
-  external: 761201155 }
+{ rss: 682528768,
+  heapTotal: 10731520,
+  heapUsed: 5398648,
+  external: 658583438 }
 
 { words:
    [ 'Undertale',
@@ -91,4 +91,4 @@ console.log(tree.getWords("Undertale"));
      18488239 ],
   hasMore: false }
 ```
-And it takes about 750MiB when you load this trie tree on memory.
+And it takes about 651MiB when you load this trie tree on memory.
