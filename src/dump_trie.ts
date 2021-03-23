@@ -46,10 +46,9 @@ export const main = async () => {
   });
   console.log(`found ${entries} entries.`);
 
-  let data = "";
-  const indices = new Uint32Array(entries + 1);
-  indices[0] = 0;
   await new Promise((resolve, reject) => {
+    const indices = new Uint32Array(entries + 1);
+    indices[0] = 0;
     const buf = Buffer.allocUnsafe(byteLength);
 
     const stream = createReadStream(argv.input);
@@ -65,13 +64,11 @@ export const main = async () => {
       wrote += word.length;
     });
     reader.on('close', () => {
-      data = buf.toString('ucs2');
+      console.log(`loaded ${entries} words.`);
+      const tree = ReadonlyTrieTree.fromBufferIndices(buf, indices, true);
+      console.log(`finish building Trie.`);
+      writeFileSync(argv.output, tree.dump());
       resolve(true);
     });
   });
-
-  console.log(`loaded ${entries} words.`);
-  const tree = ReadonlyTrieTree.fromDataIndices(data, indices, true);
-  console.log(`finish building Trie.`);
-  writeFileSync(argv.output, tree.dump());
 };

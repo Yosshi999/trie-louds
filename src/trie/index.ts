@@ -63,13 +63,16 @@ class StrList {
     this.idx = 0;
   }
   push(x: string) {
-    assert(this.idx < this.capacity);
     const bx = Buffer.from(x, 'ucs2');
+    this.pushBuffer(bx);
+  }
+  pushBuffer(bx: Buffer) {
+    assert(this.idx < this.capacity);
     assert(this.dataIdx + bx.byteLength < this.data.length);
     this.data.set(bx, this.dataIdx);
     this.dataIdx += bx.byteLength;
 
-    this.charIdx += x.length;
+    this.charIdx += bx.byteLength >> 1;
     this.indices[this.idx+1] = this.charIdx;
     this.idx++;
   }
@@ -225,8 +228,13 @@ export class LoudsBackend implements ITrieBackend<number> {
     return offset;
   }
 
-  buildFromDataIndices(data: string, dataIndices: Uint32Array) {
-    const dataByteLength = Buffer.from(data, 'ucs2').byteLength;
+  buildFromDataIndices(data: string, dataIndices: Uint32Array): void {
+    this.buildFromBufferIndices(Buffer.from(data, 'ucs2'), dataIndices);
+  }
+
+  buildFromBufferIndices(buffer: Buffer, dataIndices: Uint32Array): void {
+    const dataByteLength = buffer.byteLength;
+    const charLength = buffer.byteLength >> 1;
     const indices = new Uint32Array(dataIndices.length - 1);
     indices.forEach((_, i, array) => {array[i] = i;});
     const dataLengths = new Uint32Array(dataIndices.length - 1);
@@ -235,10 +243,10 @@ export class LoudsBackend implements ITrieBackend<number> {
       array[i] = dataIndices[i+1] - dataIndices[i];
     });
 
-    const rawVec = new bv.BitList((1 + data.length) * 2);
+    const rawVec = new bv.BitList((1 + charLength) * 2);
     rawVec.push(true);
     rawVec.push(false);
-    const rawTerm = new bv.BitList((1 + data.length) * 2);
+    const rawTerm = new bv.BitList((1 + charLength) * 2);
     const rawValue = new NumberList(indices.length);
     const rawTails = new StrList(indices.length, dataByteLength);
     const edgeBuffer = Buffer.alloc(dataByteLength);
@@ -255,7 +263,7 @@ export class LoudsBackend implements ITrieBackend<number> {
     for (let i = 0; i < maxChars && !queue.empty(); i++) {
       if (this.verbose) console.log(`char ${i}`);
       nextQueue.clear();
-      queue.data.forEach(v => {ords[v] = data.charCodeAt(dataIndices[v] + i);});
+      queue.data.forEach(v => {ords[v] = buffer.readUInt16LE((dataIndices[v] + i)*2);});
 
       let sublen = 0;
       for (let j = 0; j < queue.delimIdx; j++) {
@@ -289,9 +297,9 @@ export class LoudsBackend implements ITrieBackend<number> {
           // only one word in the path.
           rawTerm.push(true);
           const wordIdx = nextQueue.data[nextQueue.delim[j]];
-          const suffix = data.slice(dataIndices[wordIdx]+i+1, dataIndices[wordIdx+1]);
+          const suffix = buffer.slice((dataIndices[wordIdx]+i+1)*2, dataIndices[wordIdx+1]*2);
           rawValue.push(wordIdx);
-          rawTails.push(suffix);
+          rawTails.pushBuffer(suffix);
         } else {
           let existTerm = false;
           for (let k = nextQueue.delim[j]; k < nextQueue.delim[j+1]; k++) {

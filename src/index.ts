@@ -1,7 +1,5 @@
 import * as bv from './bitvector';
 import * as trie from './trie';
-import * as fs from 'fs';
-import { assert } from 'console';
 
 type TempInfo = {depth: number, iter: number, prefix: string};
 type SearchResult = {words: string[], values: number[], hasMore: boolean, temporaryInfo?: TempInfo};
@@ -13,9 +11,13 @@ export class ReadonlyTrieTree {
   }
   
   static fromDataIndices(data: string, indices: Uint32Array, verbose?: boolean) {
+    return ReadonlyTrieTree.fromBufferIndices(Buffer.from(data, 'ucs2'), indices, verbose);
+  }
+
+  static fromBufferIndices(buffer: Buffer, indices: Uint32Array, verbose?: boolean) {
     const obj = new this();
     if (verbose) obj.tree.verbose = true;
-    obj.tree.buildFromDataIndices(data, indices);
+    obj.tree.buildFromBufferIndices(buffer, indices);
     obj.length = indices.length - 1;
     return obj;
   }
