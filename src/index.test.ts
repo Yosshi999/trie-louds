@@ -119,6 +119,39 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
 
       expect(trie.getMoreWords(trie.getWords("", 3).temporaryInfo!).words.length).toBe(4);
     });
+
+    it('countwords', () => {
+      const keys = "She sell sells seashells by the seashore".split(" ");
+      let trie: ReadonlyTrieTree;
+      if (fromDataIndices) {
+        const indices = [0];
+        keys.forEach((v) => {indices.push(indices[indices.length-1] + v.length)});
+        trie = ReadonlyTrieTree.fromDataIndices(keys.join(""), new Uint32Array(indices));
+      } else {
+        trie = ReadonlyTrieTree.fromKeywordList(keys);
+      }
+      if (withDump) {
+        const buffer = trie.dump();
+        trie = ReadonlyTrieTree.load(buffer);
+      }
+      
+      expect(trie.countWords("")).toBe(7);
+
+      expect(trie.countWords("h")).toBe(0);
+      expect(trie.countWords("Sh")).toBe(1);
+      expect(trie.countWords("sea")).toBe(2);
+      expect(trie.countWords("sell")).toBe(2);
+      expect(trie.countWords("s")).toBe(4);
+      expect(trie.countWords("seashore")).toBe(1);
+      expect(trie.countWords("seashores")).toBe(0);
+
+      expect(trie.countWords("s", {minLength: 3})).toBe(4); // sell sells seashells seashore
+      expect(trie.countWords("s", {minLength: 5})).toBe(3); // sells seashells seashore
+      expect(trie.countWords("s", {maxLength: 5})).toBe(2); // sell sells
+      expect(trie.countWords("s", {minLength: 4, maxLength: 5})).toBe(2); // sell sells
+      expect(trie.countWords("s", {minLength: 4, maxLength: 4})).toBe(1); // sell
+      expect(trie.countWords("s", {maxLength: 2})).toBe(0);
+    });
   };
 }
 describe('readonly trie tree', testTrie(false, false));
@@ -183,6 +216,8 @@ function testLargeTrie(withDump: boolean, fromDataIndices: boolean) {
     
       expect(trie.contains("an")).toBe(false);
       expect(trie.contains("and")).toBe(true);
+
+      expect(trie.countWords("")).toBe(sortedUniqueKeys.length);
     });
   };
 }

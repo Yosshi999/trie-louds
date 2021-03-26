@@ -109,6 +109,28 @@ export class ReadonlyTrieTree {
     }
   }
 
+  /*
+  * Aggregate words which are equal to / under the given node, and return the number of them.
+  * `setting.limit` doesn't work in this function.
+  * Words longer than `setting.maxLength` and ones shorter than `setting.minLength` are excluded.
+  */
+  private count(iter: number, prefix: string, setting: SearchSetting, depth: number): number {
+    if (prefix.length > setting.maxLength) return 0; // all words deeper than here is excluded.
+    let ret = 0;
+    const term = this.tree.getTerminal(iter);
+    if (term !== null) {
+      const wordLength = prefix.length + term.tail.length;
+      if (wordLength >= setting.minLength && wordLength <= setting.maxLength) {
+        // has word
+        ret++;
+      }
+    }
+    for (let _iter = this.tree.getFirstChild(iter); _iter !== null; _iter = this.tree.getNextSibling(_iter)) {
+      ret += this.count(_iter, prefix+this.tree.getEdge(_iter), setting, depth+1);
+    }
+    return ret;
+  }
+
   contains(word: string): boolean {
     const entry = this.getValue(word);
     return entry !== null;
@@ -125,6 +147,26 @@ export class ReadonlyTrieTree {
       }
     }
     return null;
+  }
+
+  countWords(prefix: string, _setting?: OptSearchSetting): number {
+    const setting = SearchSettingWithDefault(_setting);
+    const root = this.tree.getRoot();
+    const result = this.dfs(prefix, root);
+    if (result === null) return 0;
+
+    if (result.suffix.length > 0) {
+      // cannot step anymore
+      const term = this.tree.getTerminal(result.iter);
+      if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix
+        && prefix.length >= setting.minLength && prefix.length <= setting.maxLength) {
+          return 1;
+      }
+      return 0;
+    }
+
+    // can step more
+    return this.count(result.iter, prefix, setting, 0);
   }
   
   getWords(prefix: string, _setting?: OptSearchSetting | number): SearchResult {
