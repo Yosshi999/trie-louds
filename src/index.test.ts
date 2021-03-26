@@ -110,6 +110,13 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
       expect(trie.getWords("seashore").words.length).toBe(1);
       expect(trie.getWords("seashores").words.length).toBe(0);
 
+      expect(trie.getWords("s", {minLength: 3}).words.length).toBe(4); // sell sells seashells seashore
+      expect(trie.getWords("s", {minLength: 5}).words.length).toBe(3); // sells seashells seashore
+      expect(trie.getWords("s", {maxLength: 5}).words.length).toBe(2); // sell sells
+      expect(trie.getWords("s", {minLength: 4, maxLength: 5}).words.length).toBe(2); // sell sells
+      expect(trie.getWords("s", {minLength: 4, maxLength: 4}).words.length).toBe(1); // sell
+      expect(trie.getWords("s", {maxLength: 2}).words.length).toBe(0);
+
       expect(trie.getMoreWords(trie.getWords("", 3).temporaryInfo!).words.length).toBe(4);
     });
   };
