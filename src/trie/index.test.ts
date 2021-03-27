@@ -39,10 +39,15 @@ function testLouds(V: BitVector, withDump: boolean, fromDataIndices: boolean) {
       expect(trie.getTerminal(first)!.value).toBe(0);
       expect(trie.getTerminal(first)!.tail).toBe("n");
       expect(trie.getFirstChild(first)).toBe(null);
+      expect(trie.getLastChild(first)).toBe(null);
 
       const second = trie.getNextSibling(first)!;
       expect(trie.getEdge(second)).toBe("i");
       expect(trie.getParent(second)).toBe(trie.getRoot());
+
+      const last = trie.getLastChild(trie.getRoot())!;
+      expect(trie.getParent(last)).toBe(trie.getRoot());
+      expect(trie.getEdge(last)).toBe("o");
     });
   
     it('build2', () => {

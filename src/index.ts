@@ -149,6 +149,39 @@ export class ReadonlyTrieTree {
     return null;
   }
 
+  /* count words without search settings */
+  countWordsFaster(prefix: string): number {
+    const root = this.tree.getRoot();
+    const result = this.dfs(prefix, root);
+    if (result === null) return 0;
+
+    if (result.suffix.length > 0) {
+      // cannot step anymore
+      const term = this.tree.getTerminal(result.iter);
+      if (term !== null && term.tail.slice(0, result.suffix.length) === result.suffix) {
+        return 1;
+      }
+      return 0;
+    }
+
+    // can step more
+    let iter = result.iter;
+    let count = 0;
+    let head: number|null = iter;
+    let tail: number|null = iter;
+    while (true) {
+      count += this.tree.countTerminals(head, tail);
+      const headBound = this.tree.getFirstChild(head, true)!;
+      const tailBound = this.tree.getLastChild(tail, true)!;
+      tail = this.tree.getLastNode(tailBound);
+      head = this.tree.getFirstNode(headBound);
+      // console.log(count, headBound, tailBound, head, tail);
+      if (head === null || tail === null || tail < headBound || head > tailBound)
+        break;
+    }
+    return count;
+  }
+
   countWords(prefix: string, _setting?: OptSearchSetting): number {
     const setting = SearchSettingWithDefault(_setting);
     const root = this.tree.getRoot();

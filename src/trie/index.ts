@@ -6,7 +6,10 @@ interface ITrieBackend<index_t> {
 
   getRoot(): index_t;
   getParent(idx: index_t): index_t;
-  getFirstChild(idx: index_t): index_t|null;
+  getFirstChild(idx: index_t, allowEmpty?: boolean): index_t|null;
+  getLastChild(idx: index_t, allowEmpty?: boolean): index_t|null;
+  getFirstNode(idx: index_t): index_t|null;
+  getLastNode(idx: index_t): index_t|null;
   getNextSibling(idx: index_t): index_t|null;
   getEdge(idx: index_t): string;
   build(keys: string[]): void;
@@ -14,6 +17,8 @@ interface ITrieBackend<index_t> {
   /* TODO: use buffer instead of string to reduce memory usage */
   // buildFromBufferIndices(buf: Buffer, indices: Uint32Array): void;
   getTerminal(idx: index_t): {value: number, tail: string} | null;
+  /* counts terminal nodes between [head, tail]. */
+  countTerminals(head: index_t, tail: index_t): number;
 
   dump(): Buffer;
   load(buf: Buffer, offset: number): number;
@@ -165,11 +170,41 @@ export class LoudsBackend implements ITrieBackend<number> {
   getParent(idx: number) {
     return this.vector.select1(this.vector.rank0(idx))-1;
   }
-  getFirstChild(idx: number) {
+
+  getFirstNode(idx: number) {
+    if (this.vector.access(idx)) return idx;
+    const r1 = this.vector.rank1(idx);
+    // wants first '1' after here
+    if (r1 === this.vector.rank1(this.vector.length)) {
+      // there is no more '1' after here
+      return null;
+    }
+    return this.vector.select1(r1+1)-1;
+  }
+  getLastNode(idx: number) {
+    if (this.vector.access(idx)) return idx;
+    const r1 = this.vector.rank1(idx);
+    // wants last '1' before here
+    /* istanbul ignore if */
+    if (r1 === 0) {
+      // edge case but it never happens in Trie, which always starts with 1.
+      return null;
+    }
+    return this.vector.select1(r1)-1;
+  }
+  getFirstChild(idx: number, allowEmpty?: boolean) {
     const r1 = this.vector.rank1(idx)+1;
     const child = this.vector.select0(r1);
-    if (this.vector.access(child))
+    if (allowEmpty || this.vector.access(child))
       return child;
+    else
+      return null;
+  }
+  getLastChild(idx: number, allowEmpty?: boolean) {
+    const r1 = this.vector.rank1(idx)+1;
+    const child = this.vector.select0(r1);
+    if (allowEmpty || this.vector.access(child))
+      return this.vector.select0(r1+1)-2;
     else
       return null;
   }
@@ -193,6 +228,17 @@ export class LoudsBackend implements ITrieBackend<number> {
     }
     else
       return null;
+  }
+
+  countTerminals(head: number, tail: number) {
+    const headLabel = this.vector.rank1(head) - 1;
+    const tailLabel = this.vector.rank1(tail) - 1;
+    if (headLabel < 0 || tailLabel < 0) return 0;
+    if (headLabel > tailLabel) return 0;
+    return (
+      this.terminals.rank1(tailLabel)
+      - this.terminals.rank1(headLabel)
+      + (this.terminals.access(tailLabel) ? 1 : 0));
   }
 
   dump() {

@@ -136,6 +136,7 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
       }
       
       expect(trie.countWords("")).toBe(7);
+      expect(trie.countWordsFaster("")).toBe(7);
 
       expect(trie.countWords("h")).toBe(0);
       expect(trie.countWords("Sh")).toBe(1);
@@ -144,6 +145,13 @@ function testTrie(withDump: boolean, fromDataIndices: boolean) {
       expect(trie.countWords("s")).toBe(4);
       expect(trie.countWords("seashore")).toBe(1);
       expect(trie.countWords("seashores")).toBe(0);
+      expect(trie.countWordsFaster("h")).toBe(0);
+      expect(trie.countWordsFaster("Sh")).toBe(1);
+      expect(trie.countWordsFaster("sea")).toBe(2);
+      expect(trie.countWordsFaster("sell")).toBe(2);
+      expect(trie.countWordsFaster("s")).toBe(4);
+      expect(trie.countWordsFaster("seashore")).toBe(1);
+      expect(trie.countWordsFaster("seashores")).toBe(0);
 
       expect(trie.countWords("s", {minLength: 3})).toBe(4); // sell sells seashells seashore
       expect(trie.countWords("s", {minLength: 5})).toBe(3); // sells seashells seashore
@@ -218,6 +226,7 @@ function testLargeTrie(withDump: boolean, fromDataIndices: boolean) {
       expect(trie.contains("and")).toBe(true);
 
       expect(trie.countWords("")).toBe(sortedUniqueKeys.length);
+      expect(trie.countWordsFaster("")).toBe(sortedUniqueKeys.length);
     });
   };
 }
