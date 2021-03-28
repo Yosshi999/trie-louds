@@ -10,26 +10,202 @@ Readonly but memory-sufficient data structure for dictionaries by utilizing LOUD
 $ npm install --save trie-louds
 ```
 
-## Usage
-```
+## API
+### static fromKeywordList(keys, verbose=false)
+Build a tree from list of keywords.
+
+**Parameters**
+- `keys: string[]` List of keywords.
+- `verbose: boolean` If true, some debug logs will be printed.
+
+**Returns**
+- `tree: ReadonlyTrieTree`
+
+**Example**
+
+```js
 const {ReadonlyTrieTree} = require("trie-louds");
-const fs = require("fs");
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
+```
+
+### contains(word)
+Returns `true` if it contains the given word.
+This is case-sensitive.
+
+**Parameters**
+- `word: string`
+
+**Returns**
+- `answer: boolean`
+
+**Example**
+
+```js
+const {ReadonlyTrieTree} = require("trie-louds");
 const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
 
 console.log(tree.contains("She")); // true
 console.log(tree.contains("she")); // false
-console.log(tree.getWords("sea").words); // [ 'seashells', 'seashore' ] (search the words with given prefix)
-console.log(tree.getValue("seashells")); // 2 (index of keywords)
+```
+
+### getValue(word)
+Returns `word`'s index in the keyword list.
+If it doesn't contain `word`, this returns `null`.
+
+**Parameters**
+- `word: string`
+
+**Returns**
+- `index: number|null`
+
+**Example**
+
+```js
+const {ReadonlyTrieTree} = require("trie-louds");
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
+
+console.log(tree.getValue("She")); // 0
+console.log(tree.getValue("sells")); // 1
+console.log(tree.getValue("seashells")); // 2
 console.log(tree.getValue("sell")); // null (not found)
+```
+
+### getWords(prefix, limit=1000)
+Search the words which have the given prefix.
+If more than `limit` words are found, property `hasMore` become `true`.
+
+**Parameters**
+- `prefix: string`
+- `limit: number` The maximum number of words in the result.
+
+**Returns**
+- `result: SearchResult`
+  - `words: string[]` Found words.
+  - `values: number[]` Indices of found words.
+  - `hasMore: boolean` If true, there are unsearched words.
+  - `temporaryInfo?: TempInfo` This exists iff `hasMore` is `true`. See `getMoreWords()`.
+
+**Example**
+
+```js
+const {ReadonlyTrieTree} = require("trie-louds");
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
 
 console.log(tree.getWords("").words); // [ 'She', 'by', 'seashells', 'seashore', 'sells', 'the' ] (searched words are sorted)
-const limited = tree.getWords("", 3);
-console.log(limited.words); // [ 'She', 'by', 'seashells' ] (you can limit the number of searched words (default is 1000))
-console.log(limited.hasMore); // true (if there are unsearched words due to limit, hasMore will be true)
-// (and you can continue searching by calling getMoreWords with temporaryInfo)
-console.log(tree.getMoreWords(limited.temporaryInfo).words); // [ 'seashore', 'sells', 'the' ]
 
-fs.writeFileSync("tree.dat", tree.dump()); // You can dump the tree data.
+const limited = tree.getWords("", 3);
+console.log(limited.words); // [ 'She', 'by', 'seashells' ]
+console.log(limited.hasMore); // true
+```
+
+### getWords(prefix, setting)
+You can set more detailed search settings.
+
+**Parameters**
+- `prefix: string`
+- `setting: OptSearchSetting`
+  - `limit?: number` Default is `1000`. Same as `limit` in `getWords(prefix, limit)`.
+  - `maxLength?: number` If this exists, words longer than this will be excluded.
+  - `minLength?: number` If this exists, words shorter than this will be excluded.
+
+**Returns**
+- `result: SearchResult` Same as the output of `getWords(prefix, limit)`.
+
+### getMoreWords(temporaryInfo, limit=1000)
+You can continue searching by calling this with `temporaryInfo` returned by `getWords` function.
+
+**Parameters**
+- `temporaryInfo: TempInfo`
+- `limit: number` The maximum number of words in the result.
+
+**Returns**
+- `result: SearchResult`
+  - `words: string[]` Found words.
+  - `values: number[]` Indices of found words.
+  - `hasMore: boolean` If true, there are unsearched words.
+  - `temporaryInfo?: TempInfo` This exists iff `hasMore` is `true`.
+
+**Example**
+
+```js
+const {ReadonlyTrieTree} = require("trie-louds");
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
+
+const limited = tree.getWords("", 3);
+console.log(limited.words); // [ 'She', 'by', 'seashells' ]
+console.log(limited.hasMore); // true
+console.log(tree.getMoreWords(limited.temporaryInfo).words); // [ 'seashore', 'sells', 'the' ]
+```
+
+### getMoreWords(temporaryInfo, setting)
+You can set more detailed search settings.
+
+**Parameters**
+- `temporaryInfo: TempInfo`
+- `setting: OptSearchSetting`
+
+**Returns**
+- `result: SearchResult`
+
+### countWords(prefix, setting)
+Count the words which meets the given setting and prefix.
+It will take the same computational cost as `getWords` function.
+If you don't need detailed settings, `countWordsFaster` is suitable.
+
+**Parameters**
+- `prefix: string`
+- `setting: OptSearchSetting`
+  - `limit?: number` This option doesn't work in this function. It will search all.
+  - `maxLength?: number` If this exists, words longer than this will be excluded.
+  - `minLength?: number` If this exists, words shorter than this will be excluded.
+
+**Returns**
+- `count: number`
+
+**Example**
+
+```js
+const {ReadonlyTrieTree} = require("trie-louds");
+const tree = ReadonlyTrieTree.fromKeywordList(["She", "sells", "seashells", "by", "the", "seashore"]);
+
+console.log(tree.countWords("")); // 6
+console.log(tree.countWords("s")); // 3
+```
+
+### countWordsFaster(prefix)
+Counts the words which have the given prefix. This is much faster than `countWords()`.
+
+**Parameters**
+- `prefix: string`
+
+**Returns**
+- `count: number`
+
+### dump()
+You can dump the tree to `Buffer`.
+
+**Returns**
+- `buf: Buffer`
+
+**Example**
+
+```js
+const fs = require("fs");
+fs.writeFileSync("tree.dat", tree.dump());
+```
+
+### static load(buffer)
+You can load the tree from dumped data.
+
+**Parameters**
+- `buffer: Buffer`
+
+**Returns**
+- `tree: ReadonlyTrieTree`
+
+**Example**
+
+```js
 const loadedTree = ReadonlyTrieTree.load(fs.readFileSync("tree.dat"));
 console.log(loadedTree.getWords("sea").words); // [ 'seashells', 'seashore' ]
 ```

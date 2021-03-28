@@ -1,6 +1,6 @@
 {
     "name": "trie-louds",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Readonly but memory-sufficient data structure for dictionaries",
     "main": "./dist/index.js",
     "bin": {
