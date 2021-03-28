@@ -14,8 +14,7 @@ interface ITrieBackend<index_t> {
   getEdge(idx: index_t): string;
   build(keys: string[]): void;
   buildFromDataIndices(data: string, indices: Uint32Array): void;
-  /* TODO: use buffer instead of string to reduce memory usage */
-  // buildFromBufferIndices(buf: Buffer, indices: Uint32Array): void;
+  buildFromBufferIndices(buf: Buffer, indices: Uint32Array): void;
   getTerminal(idx: index_t): {value: number, tail: string} | null;
   /* counts terminal nodes between [head, tail]. */
   countTerminals(head: index_t, tail: index_t): number;
